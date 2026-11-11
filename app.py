@@ -11,7 +11,16 @@ import streamlit as st
 
 st.set_page_config(page_title="CivilCalc Pro", page_icon="🧱", layout="wide")
 
-ADMIN_PASSWORD = "admin123"
+def get_secret(key):
+    try:
+        return str(st.secrets[key])
+    except Exception:
+        return None
+
+
+# Atur di Streamlit Cloud: Settings -> Secrets (lihat panduan). Jika kosong, fitur admin nonaktif.
+ADMIN_PASSWORD = get_secret("ADMIN_PASSWORD")
+OWNER_KEY = get_secret("OWNER_KEY")
 SAK_KG = 40.0
 
 RATIO_PRESETS = {
@@ -49,6 +58,10 @@ def init_state():
 
 init_state()
 db = st.session_state.db
+
+# Fitur admin hanya muncul jika link dibuka dengan ?owner=<OWNER_KEY>
+admin_available = bool(OWNER_KEY) and bool(ADMIN_PASSWORD) and st.query_params.get("owner") == OWNER_KEY
+is_admin = admin_available and st.session_state.admin
 
 
 def rp(x):
@@ -105,6 +118,7 @@ html, body, [class*="css"], .stApp, .stMarkdown, button, input, select, textarea
 .section-title { font-size: 1.05rem; font-weight: 700; color: #0f172a; margin: 18px 0 8px 0; }
 section[data-testid="stSidebar"] { background: #ffffff; border-right: 1px solid #e2e8f0; }
 .stTabs [data-baseweb="tab"] { font-weight: 600; }
+[data-testid="stToolbar"], [data-testid="stAppDeployButton"], [data-testid="stDeployButton"], [data-testid="stMainMenu"], [data-testid="stToolbarActions"], #MainMenu, footer { display: none !important; visibility: hidden !important; }
 </style>
 """,
     unsafe_allow_html=True,
@@ -157,21 +171,22 @@ with st.sidebar:
         format="%.0f", key=f"hp_{ver}",
     )
 
-    st.markdown("---")
-    st.markdown("### 🔐 Akses Admin (Owner)")
-    if st.session_state.admin:
-        st.success("Admin Mode aktif")
-        if st.button("Keluar dari Admin", use_container_width=True):
-            st.session_state.admin = False
-            st.rerun()
-    else:
-        pw = st.text_input("Password", type="password", key="pw_input")
-        if st.button("Masuk", use_container_width=True):
-            if pw == ADMIN_PASSWORD:
-                st.session_state.admin = True
+    if admin_available:
+        st.markdown("---")
+        st.markdown("### 🔐 Akses Admin (Owner)")
+        if st.session_state.admin:
+            st.success("Admin Mode aktif")
+            if st.button("Keluar dari Admin", use_container_width=True):
+                st.session_state.admin = False
                 st.rerun()
-            else:
-                st.error("Password salah.")
+        else:
+            pw = st.text_input("Password", type="password", key="pw_input")
+            if st.button("Masuk", use_container_width=True):
+                if pw == ADMIN_PASSWORD:
+                    st.session_state.admin = True
+                    st.rerun()
+                else:
+                    st.error("Password salah.")
 
 # ------------------------------------------------------------------ CORE ENGINE
 p = mat["p"] / 100.0
@@ -211,7 +226,7 @@ rab = pd.DataFrame(
 # ------------------------------------------------------------------ HERO
 badge = (
     '<span class="badge badge-admin">🔓 Admin Mode Active</span>'
-    if st.session_state.admin
+    if is_admin
     else '<span class="badge badge-user">👤 User Mode</span>'
 )
 st.markdown(
@@ -221,9 +236,16 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
-tab1, tab2, tab3, tab4 = st.tabs(
-    ["📊 Dashboard Metrik Utama", "📈 Analisis Cost & RAB", "⚙️ Panel Pengaturan Admin", "📄 Formulasi Teknik Sipil & Ekspor"]
-)
+if is_admin:
+    tab1, tab2, tab3, tab4 = st.tabs(
+        ["📊 Dashboard Metrik Utama", "📈 Analisis Cost & RAB", "⚙️ Panel Pengaturan Admin", "📄 Formulasi Teknik Sipil & Ekspor"]
+    )
+else:
+    # Pengunjung biasa: tab admin tidak dibuat sama sekali
+    tab1, tab2, tab4 = st.tabs(
+        ["📊 Dashboard Metrik Utama", "📈 Analisis Cost & RAB", "📄 Formulasi Teknik Sipil & Ekspor"]
+    )
+    tab3 = st.container()
 
 # ------------------------------------------------------------------ TAB 1
 with tab1:
@@ -299,8 +321,8 @@ with tab2:
 
 # ------------------------------------------------------------------ TAB 3
 with tab3:
-    if not st.session_state.admin:
-        st.warning("🔒 Panel ini hanya dapat diakses Admin. Masuk lewat **Akses Admin (Owner)** di sidebar.")
+    if not is_admin:
+        pass
     else:
         callout("Perubahan di panel ini tersimpan di <b>session state</b> dan langsung memperbarui seluruh kalkulasi aplikasi.")
 
