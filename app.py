@@ -513,15 +513,17 @@ SIM_HTML = r'''
 <div style="font-family:Inter,system-ui,sans-serif;color:#0d3d4a">
 <canvas id="cv" style="display:block;margin:0 auto;border-radius:16px;background:linear-gradient(#dff0f7,#f4fafc)"></canvas>
 <div style="display:flex;justify-content:space-between;align-items:center;margin-top:10px;gap:10px;flex-wrap:wrap"><b id="tx"></b><span><button onclick="play()">▶ Mulai</button> <button onclick="reset()">↺ Ulang</button></span></div>
-<div id="lg" style="font-size:12px;color:#2b4650;margin-top:6px"></div></div>
+<div id="lg" style="font-size:14px;font-weight:600;color:#2b4650;margin-top:6px"></div></div>
 <style>button{background:#0b5563;color:#fff;border:0;border-radius:10px;padding:8px 14px;font-weight:600;cursor:pointer}</style>
 <script>
 const C=__CFG__,cv=document.getElementById("cv"),x=cv.getContext("2d");
 const L=C.L,H=C.H,rise=Math.min(2.2,Math.max(0.8,L*0.15)),Dp=0.7,B=0.15,M=0.9;
 const Wm=L+2*M,Hm=0.25+rise+B+H+B+Dp+0.1;
-const S=Math.min(Math.max(300,Math.min(780,innerWidth-24))/Wm,420/Hm);
-cv.width=Math.round(Wm*S);cv.height=Math.round(Hm*S);
-const X0=M*S,GY=(0.25+rise+B+H+B)*S,WB=GY-B*S,WT=WB-H*S;
+let S,X0,GY,WB,WT;
+function layout(){const w=Math.max(280,Math.min(1100,(document.documentElement.clientWidth||innerWidth)-8));
+ S=Math.min(w/Wm,540/Hm);cv.width=Math.round(Wm*S);cv.height=Math.round(Hm*S);
+ X0=M*S;GY=(0.25+rise+B+H+B)*S;WB=GY-B*S;WT=WB-H*S;}
+layout();
 const pe=C.p+C.s,te=C.t+C.s,rows=Math.ceil(H/te),BR=[];
 for(let r=0;r<rows;r++){const y=r*te,off=(r%2)?pe/2:0;
  for(let c=-1;c*pe+off<L;c++){const a=Math.max(0,c*pe+off),e=Math.min(L,c*pe+off+C.p),h=Math.min(C.t,H-y);
@@ -554,6 +556,8 @@ function draw(t){
 function reset(){clearInterval(tm);t=0;draw(0);}
 function play(){reset();tm=setInterval(()=>{t++;draw(t);if(t>=220)clearInterval(tm);},45);}
 document.getElementById("lg").textContent=C.info;
+addEventListener("resize",()=>{layout();draw(t);});
+[150,700].forEach(ms=>setTimeout(()=>{layout();draw(t);},ms));
 play();
 </script>'''
 
@@ -584,9 +588,9 @@ with tab_sim:
     _cfg = {
         "L": panjang_dinding, "H": tinggi_dinding, "p": p, "t": t, "s": s,
         "color": "#cfd8dc" if is_ringan else "#c1583c", "N": int(n_total), "ops": _ops,
-        "info": "Pondasi batu kali · Sloof · Kolom praktis · Pasangan bata · Ring balok · Atap genteng. " + _bk + " Posisi dan ukuran bukaan bersifat ilustrasi.",
+        "info": f"Panjang dinding {g(panjang_dinding)} m · Tinggi dinding {g(tinggi_dinding)} m · Luas bukaan {g(luas_bukaan)} m². " + _bk + " Posisi dan ukuran bukaan bersifat ilustrasi.",
     }
-    st.components.v1.html(SIM_HTML.replace("__CFG__", json.dumps(_cfg)), height=560)
+    st.components.v1.html(SIM_HTML.replace("__CFG__", json.dumps(_cfg)), height=700)
     callout("Ukuran dinding dan jumlah bata pada simulasi mengikuti hitungan aplikasi. Pola bata <b>running bond</b>, bata di sekitar bukaan dan ujung dinding dipotong sesuai kebutuhan.")
 
 # ------------------------------------------------------------------ TAB 3
