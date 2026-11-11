@@ -10,7 +10,7 @@ import pandas as pd
 import plotly.express as px
 import streamlit as st
 
-st.set_page_config(page_title="CivilCalc Pro", page_icon="🧱", layout="wide")
+st.set_page_config(page_title="CivilCalc Pro", page_icon="🧱", layout="wide", initial_sidebar_state="expanded")
 
 def get_secret(key):
     try:
@@ -85,7 +85,10 @@ html, body, [class*="css"], .stApp, .stMarkdown, button, input, select, textarea
                 linear-gradient(135deg, #e9eff3 0%, #d3e5ee 100%);
 }
 header[data-testid="stHeader"] { background: transparent; }
-[data-testid="stToolbar"], [data-testid="stAppDeployButton"], [data-testid="stDeployButton"], [data-testid="stMainMenu"], [data-testid="stToolbarActions"], #MainMenu, footer { display: none !important; visibility: hidden !important; }
+[data-testid="stAppDeployButton"], [data-testid="stDeployButton"], [data-testid="stMainMenu"], [data-testid="stToolbarActions"], #MainMenu, footer { display: none !important; visibility: hidden !important; }
+[data-testid="stToolbar"] { visibility: hidden !important; }
+[data-testid="stExpandSidebarButton"], [data-testid="stSidebarCollapsedControl"], [data-testid="collapsedControl"] { display: flex !important; visibility: visible !important; background: #115569; border-radius: 12px; }
+[data-testid="stExpandSidebarButton"] *, [data-testid="stSidebarCollapsedControl"] *, [data-testid="collapsedControl"] * { visibility: visible !important; color: #ffffff !important; fill: #ffffff !important; }
 .block-container { padding-top: 1.5rem; max-width: 1250px; }
 
 /* ---------- SIDEBAR (menu ala dashboard) ---------- */
@@ -143,6 +146,9 @@ section[data-testid="stSidebar"] [data-testid="stSliderThumbValue"], section[dat
 div[data-testid="stMain"] [data-testid^="stBaseButton-primary"] { background: #0b5563; border: none; border-radius: 12px; font-weight: 700; letter-spacing: 0.5px; }
 div[data-testid="stMain"] [data-testid^="stBaseButton-primary"]:hover { background: #115569; }
 div[data-testid="stDataFrame"] { border-radius: 16px; overflow: hidden; }
+.stApp [data-testid^="stBaseButton-primary"], .stApp button[kind="primary"], .stApp button[kind="primaryFormSubmit"] { background: #0b5563 !important; border: none !important; border-radius: 12px !important; color: #ffffff !important; font-weight: 700 !important; }
+.gate { border-radius: 24px 24px 0 0; margin-bottom: -1rem; }
+div[data-testid="stForm"] { background: rgba(255,255,255,0.75); border: 1px solid #ffffff; border-top: none; border-radius: 0 0 24px 24px; }
 </style>
 """,
     unsafe_allow_html=True,
