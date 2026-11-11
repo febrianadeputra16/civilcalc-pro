@@ -4,6 +4,7 @@
 
 import copy
 import html
+import json
 import math
 
 import pandas as pd
@@ -106,10 +107,10 @@ section[data-testid="stSidebar"] .stButton > button { justify-content: flex-star
 section[data-testid="stSidebar"] .stButton > button p { color: inherit !important; }
 section[data-testid="stSidebar"] .stButton > button:hover { background: rgba(255,255,255,0.15); color: #ffffff; }
 section[data-testid="stSidebar"] [data-testid="stBaseButton-primary"], section[data-testid="stSidebar"] button[kind="primary"] { background: #ffffff !important; color: #0d3d4a !important; box-shadow: 0 6px 16px rgba(0,0,0,0.18); }
-section[data-testid="stSidebar"] div[data-baseweb="input"], section[data-testid="stSidebar"] div[data-baseweb="base-input"], section[data-testid="stSidebar"] div[data-baseweb="select"] > div { background: rgba(255,255,255,0.10) !important; border-color: rgba(255,255,255,0.18) !important; border-radius: 12px !important; }
-section[data-testid="stSidebar"] input { color: #ffffff !important; -webkit-text-fill-color: #ffffff !important; }
-section[data-testid="stSidebar"] div[data-baseweb="select"] * { color: #ffffff !important; }
-section[data-testid="stSidebar"] [data-testid="stNumberInputStepDown"], section[data-testid="stSidebar"] [data-testid="stNumberInputStepUp"] { background: transparent !important; color: #ffffff !important; }
+section[data-testid="stSidebar"] div[data-baseweb="input"], section[data-testid="stSidebar"] div[data-baseweb="base-input"], section[data-testid="stSidebar"] div[data-baseweb="select"] > div { background: #f4fafb !important; border-color: transparent !important; border-radius: 12px !important; }
+section[data-testid="stSidebar"] input { color: #0d3d4a !important; -webkit-text-fill-color: #0d3d4a !important; }
+section[data-testid="stSidebar"] div[data-baseweb="select"] * { color: #0d3d4a !important; }
+section[data-testid="stSidebar"] [data-testid="stNumberInputStepDown"], section[data-testid="stSidebar"] [data-testid="stNumberInputStepUp"] { background: transparent !important; color: #0d3d4a !important; }
 section[data-testid="stSidebar"] [data-testid="stSliderThumbValue"], section[data-testid="stSidebar"] [data-testid="stTickBarMin"], section[data-testid="stSidebar"] [data-testid="stTickBarMax"] { color: #7fd8c0 !important; }
 
 /* ---------- HERO, CARD, TAB ---------- */
@@ -149,6 +150,17 @@ div[data-testid="stDataFrame"] { border-radius: 16px; overflow: hidden; }
 .stApp [data-testid^="stBaseButton-primary"], .stApp button[kind="primary"], .stApp button[kind="primaryFormSubmit"] { background: #0b5563 !important; border: none !important; border-radius: 12px !important; color: #ffffff !important; font-weight: 700 !important; }
 .gate { border-radius: 24px 24px 0 0; margin-bottom: -1rem; }
 div[data-testid="stForm"] { background: rgba(255,255,255,0.75); border: 1px solid #ffffff; border-top: none; border-radius: 0 0 24px 24px; }
+:root { color-scheme: light; }
+[data-testid="InputInstructions"], [data-testid="stHeaderActionElements"] { display: none !important; }
+.hero-t { margin: 0; font-size: 1.8rem; font-weight: 800; color: #ffffff; letter-spacing: -0.5px; }
+.gate { padding: 18px 30px 4px 30px; }
+.gate-ic { font-size: 4.5rem; line-height: 1.1; }
+.gate-t { font-size: 2rem; font-weight: 800; color: #0d3d4a; margin: 4px 0 8px 0; }
+@media (max-width: 768px) {
+    .block-container { padding: 1rem 0.8rem; }
+    .hero { padding: 18px; } .hero-t { font-size: 1.3rem; }
+    .kpi .value { font-size: 1.4rem; } .gate-ic { font-size: 3.5rem; } .gate-t { font-size: 1.5rem; }
+}
 </style>
 """,
     unsafe_allow_html=True,
@@ -216,7 +228,10 @@ with st.sidebar:
         unsafe_allow_html=True,
     )
     if proyek:
-        st.markdown(f'<div class="side-proj"><span>PROYEK</span>{html.escape(proyek)}</div>', unsafe_allow_html=True)
+        _nm = st.text_input("PROYEK", value=proyek, key="proyek_input")
+        if _nm.strip() and _nm.strip() != proyek:
+            st.session_state.proyek = _nm.strip()
+            st.rerun()
         for k, ic, lb in (("geo", "📐", "Geometri Dinding"), ("mat", "🧱", "Spesifikasi Material"), ("hrg", "💰", "Harga Satuan Material")):
             st.button(
                 f"{ic}  {lb}", key=f"nav_{k}", on_click=set_menu, args=(k,), use_container_width=True,
@@ -237,9 +252,6 @@ with st.sidebar:
                 field("hrg", "num", kb, "Harga bata (Rp/buah)", min_value=0.0, step=50.0, format="%.0f")
                 field("hrg", "num", ks, "Harga semen (Rp/sak 40kg)", min_value=0.0, step=1000.0, format="%.0f")
                 field("hrg", "num", kp, "Harga pasir (Rp/m³)", min_value=0.0, step=5000.0, format="%.0f")
-        st.button("✏️  Ganti Nama Proyek", key="nav_ren", on_click=ganti_proyek, use_container_width=True)
-    else:
-        st.caption("Isi nama proyek di halaman utama untuk mulai menghitung.")
 
     if admin_available:
         st.markdown('<div class="side-h">🔐 Akses Admin (Owner)</div>', unsafe_allow_html=True)
@@ -306,9 +318,9 @@ badge = (
     else '<span class="badge badge-user">👤 User Mode</span>'
 )
 st.markdown(
-    f'<div class="hero"><div><h1>🧱 CivilCalc Pro</h1>'
-    f'<p>Estimator Dinding 1/2 Batu &amp; CMS Admin Panel &mdash; hitung volume material dan RAB secara presisi</p></div>'
-    f'<div class="hero-r">{chip}{badge}</div></div>',
+    f'<div class="hero"><div><div class="hero-t">🧱 CivilCalc Pro</div>'
+    f'<p>Hitung Volume Material dan RAB Secara Presisi</p></div>'
+    f'<div class="hero-r">{chip}</div></div>',
     unsafe_allow_html=True,
 )
 
@@ -316,9 +328,10 @@ if not proyek:
     _, mid, _ = st.columns([1, 2, 1])
     with mid:
         st.markdown(
-            '<div class="gate"><div class="gate-ic">🏗️</div><h2>Mulai Proyek Baru</h2>'
-            '<p>Isi nama proyek terlebih dahulu sebelum memasukkan data dinding. '
-            'Nama ini akan tampil di dashboard, RAB, dan laporan ekspor.</p></div>',
+            '<div class="gate"><div class="gate-ic">🏗️</div><div class="gate-t">Mulai Proyek Baru</div></div>'
+            '<style>[data-testid="stAppViewContainer"], [data-testid="stMain"] { overflow: hidden !important; }'
+            '.block-container { padding-top: 1rem !important; padding-bottom: 0 !important; }'
+            '.hero { margin-bottom: 12px; padding: 18px 28px; }</style>',
             unsafe_allow_html=True,
         )
         with st.form("form_proyek"):
@@ -333,13 +346,13 @@ if not proyek:
     st.stop()
 
 if is_admin:
-    tab1, tab2, tab3, tab4 = st.tabs(
-        ["📊 Dashboard Metrik Utama", "📈 Analisis Cost & RAB", "⚙️ Panel Pengaturan Admin", "📄 Formulasi Teknik Sipil & Ekspor"]
+    tab1, tab2, tab_sim, tab3, tab4 = st.tabs(
+        ["📊 Dashboard Metrik Utama", "📈 Analisis Cost & RAB", "🎬 Simulasi Pemasangan", "⚙️ Panel Pengaturan Admin", "📄 Formulasi Teknik Sipil & Ekspor"]
     )
 else:
     # Pengunjung biasa: tab admin tidak dibuat sama sekali
-    tab1, tab2, tab4 = st.tabs(
-        ["📊 Dashboard Metrik Utama", "📈 Analisis Cost & RAB", "📄 Formulasi Teknik Sipil & Ekspor"]
+    tab1, tab2, tab_sim, tab4 = st.tabs(
+        ["📊 Dashboard Metrik Utama", "📈 Analisis Cost & RAB", "🎬 Simulasi Pemasangan", "📄 Formulasi Teknik Sipil & Ekspor"]
     )
     tab3 = st.container()
 
@@ -414,6 +427,72 @@ with tab2:
             kpi("Biaya Material per m²", rp(per_m2), f"Bata {rp(biaya_bata)} &bull; Semen {rp(biaya_semen)} &bull; Pasir {rp(biaya_pasir)}", "blue"),
             unsafe_allow_html=True,
         )
+
+    # ---- Diagram batang & garis
+    def total_untuk(net):
+        n = math.ceil(net / area_unit_ef * (1 + waste / 100.0))
+        vs = max(0.0, net * b - net / area_unit_ef * (p * b * t))
+        sak = math.ceil(vs * db["mortar"]["semen_kg_m3"] / SAK_KG)
+        return n * harga_bata + sak * harga_semen + round(vs * db["mortar"]["pasir_m3_m3"], 2) * harga_pasir
+
+    if biaya_total > 0:
+        LAY = dict(font_family="Inter", paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(255,255,255,0.55)", margin=dict(t=50, b=10, l=10, r=10))
+        g1, g2 = st.columns(2)
+        with g1:
+            fb = px.bar(x=["Bata", "Semen", "Pasir"], y=[biaya_bata, biaya_semen, biaya_pasir], color=["Bata", "Semen", "Pasir"],
+                        color_discrete_sequence=["#115569", "#f6c453", "#2fc29b"], text_auto=",.0f",
+                        title="Diagram Batang: Biaya per Komponen", labels={"x": "", "y": "Rupiah"})
+            fb.update_layout(showlegend=False, **LAY)
+            st.plotly_chart(fb, use_container_width=True)
+        with g2:
+            xs = [round(a_netto * f / 10, 2) for f in range(0, 21)]
+            fl = px.line(x=xs, y=[total_untuk(x) for x in xs], markers=True, title="Diagram Garis: Biaya Total vs Luas Dinding",
+                         labels={"x": "Luas netto (m²)", "y": "Rupiah"}, color_discrete_sequence=["#115569"])
+            fl.add_scatter(x=[a_netto], y=[biaya_total], mode="markers", name="Kondisi saat ini",
+                           marker=dict(size=14, color="#f6c453", line=dict(width=2, color="#115569")))
+            fl.update_layout(showlegend=False, **LAY)
+            st.plotly_chart(fl, use_container_width=True)
+
+# ------------------------------------------------------------------ SIMULASI
+SIM_HTML = '''
+<div style="font-family:Inter,system-ui,sans-serif;color:#0d3d4a">
+<div id="st" style="position:relative;margin:0 auto;border-bottom:8px solid #115569;background:linear-gradient(#eef6f9,#d3e5ee);border-radius:16px 16px 0 0;overflow:hidden"></div>
+<div style="display:flex;justify-content:space-between;align-items:center;margin-top:12px;gap:10px;flex-wrap:wrap">
+<b id="tx"></b><span><button onclick="play()">▶ Mulai</button> <button onclick="reset()">↺ Ulang</button></span></div>
+<div id="nt" style="font-size:12px;color:#5b7c86;margin-top:6px"></div></div>
+<style>button{background:#0b5563;color:#fff;border:0;border-radius:10px;padding:8px 14px;font-weight:600;cursor:pointer}</style>
+<script>
+const C=__CFG__;const S=document.getElementById("st");let tm=null,k=0;
+const W=Math.max(260,Math.min(640,window.innerWidth-24)),bw=W/(C.cols+0.5),bh=Math.max(10,bw*C.ratio),g=Math.max(2,bw*0.05);
+S.style.width=W+"px";S.style.height=(C.rows*bh+24)+"px";
+document.getElementById("nt").textContent="Cuplikan pola pasangan (skala disederhanakan). Kebutuhan aktual: "+C.total+" bata, ± "+C.rowsAll+" lapis.";
+function reset(){clearInterval(tm);S.innerHTML="";k=0;document.getElementById("tx").textContent="Siap dipasang";}
+function play(){reset();tm=setInterval(step,110);}
+function step(){
+ if(k>=C.rows*C.cols){clearInterval(tm);document.getElementById("tx").textContent="Selesai ✔ "+C.rows+" lapis × "+C.cols+" bata";return;}
+ const r=Math.floor(k/C.cols),c=k%C.cols,y=S.clientHeight-(r+1)*bh-6;
+ if(c===0){const m=document.createElement("div");m.style.cssText="position:absolute;left:0;width:"+W+"px;height:"+(g*1.6)+"px;background:#aebdc3;top:"+(y+bh-g)+"px;transform:scaleX(0);transform-origin:left;transition:transform .5s";S.appendChild(m);setTimeout(()=>m.style.transform="scaleX(1)",20);}
+ const d=document.createElement("div");
+ d.style.cssText="position:absolute;border-radius:2px;width:"+(bw-g)+"px;height:"+(bh-g)+"px;left:"+(c*bw+(r%2?bw/2:0))+"px;top:"+(y-60)+"px;opacity:0;background:"+C.color+";box-shadow:inset 0 -2px 0 rgba(0,0,0,.18);transition:all .3s ease-in";
+ S.appendChild(d);requestAnimationFrame(()=>{d.style.top=y+"px";d.style.opacity="1";});
+ k++;document.getElementById("tx").textContent="Lapis "+(r+1)+"/"+C.rows+" · Bata "+k+"/"+(C.rows*C.cols);
+}
+play();
+</script>'''
+
+with tab_sim:
+    st.markdown('<div class="section-title">Simulasi Pemasangan Bata</div>', unsafe_allow_html=True)
+    _cfg = {
+        "cols": int(min(10, max(4, round(panjang_dinding / p_ef)))),
+        "rows": int(min(12, max(4, round(tinggi_dinding / t_ef)))),
+        "ratio": round(t_ef / p_ef, 3),
+        "color": "#cfd8dc" if "ringan" in mat_pilih.lower() else "#c1583c",
+        "total": int(n_total),
+        "rowsAll": int(math.ceil(tinggi_dinding / t_ef)),
+    }
+    st.components.v1.html(SIM_HTML.replace("__CFG__", json.dumps(_cfg)), height=400)
+    callout("Pola yang dipakai adalah <b>running bond</b>: setiap lapis digeser setengah bata supaya sambungan tidak sejajar dan dinding lebih kuat. Garis abu-abu di bawah tiap lapis adalah spesi.")
+
 
 # ------------------------------------------------------------------ TAB 3
 with tab3:
