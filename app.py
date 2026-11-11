@@ -218,6 +218,9 @@ PEREKAT_CM, PEREKAT_KG_M3, PEREKAT_SAK_KG = 0.3, 1700.0, 40.0
 
 
 def set_page(k):
+    # Nilai sudah tersimpan di V; ingatan widget dibersihkan agar halaman berikutnya memuat ulang dari V
+    for _w in [w for w in st.session_state if str(w).startswith("w_")]:
+        del st.session_state[_w]
     st.session_state.page = k
 
 
@@ -236,9 +239,16 @@ def field(sec, kind, key, label, **kw):
     # Widget hanya digambar di halamannya; nilai selalu tersimpan di V
     if proyek and st.session_state.page == sec:
         wk = "w_" + key
-        st.session_state.setdefault(wk, V[key])
+
+        def _sync(wk=wk, key=key):
+            V[key] = st.session_state[wk]  # simpan seketika saat pengguna mengubah nilai
+
+        if kind == "sel":
+            kw["index"] = kw["options"].index(V[key])
+        else:
+            kw["value"] = V[key]
         fn = {"num": st.number_input, "sel": st.selectbox, "sld": st.slider}[kind]
-        V[key] = fn(label, key=wk, **kw)
+        V[key] = fn(label, key=wk, on_change=_sync, **kw)
     return V[key]
 
 
