@@ -3,7 +3,6 @@
 # CivilCalc Pro: Estimator Dinding 1/2 Batu & CMS Admin Panel
 
 import copy
-import html
 import math
 
 import pandas as pd
@@ -78,71 +77,48 @@ st.markdown(
     """
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
-html, body, [class*="css"], .stApp, .stMarkdown, button, input, select, textarea { font-family: 'Inter', system-ui, sans-serif !important; }
-.stApp {
-    background: radial-gradient(circle at 88% 8%, #dcdff3 0%, transparent 38%),
-                radial-gradient(circle at 4% 96%, #f2e7e3 0%, transparent 38%),
-                linear-gradient(135deg, #e9eff3 0%, #d3e5ee 100%);
+html, body, [class*="css"], .stApp, .stMarkdown, button, input, select, textarea {
+    font-family: 'Inter', system-ui, sans-serif !important;
 }
-header[data-testid="stHeader"] { background: transparent; }
-[data-testid="stToolbar"], [data-testid="stAppDeployButton"], [data-testid="stDeployButton"], [data-testid="stMainMenu"], [data-testid="stToolbarActions"], #MainMenu, footer { display: none !important; visibility: hidden !important; }
+.stApp { background: #f8fafc; }
 .block-container { padding-top: 1.5rem; max-width: 1250px; }
-
-/* ---------- SIDEBAR (menu ala dashboard) ---------- */
-section[data-testid="stSidebar"] { background: linear-gradient(180deg, #115569 0%, #0d3d4a 100%); border-right: none; border-radius: 0 28px 28px 0; }
-section[data-testid="stSidebar"] label, section[data-testid="stSidebar"] [data-testid="stWidgetLabel"] p,
-section[data-testid="stSidebar"] .stMarkdown p, section[data-testid="stSidebar"] [data-testid="stCaptionContainer"] { color: #cfe6ec !important; }
-.brand { display: flex; align-items: center; gap: 12px; margin: 4px 0 18px 0; }
-.brand-logo { width: 44px; height: 44px; border-radius: 14px; background: linear-gradient(135deg, #34d3a0, #1c8fb5); display: flex; align-items: center; justify-content: center; font-size: 1.4rem; }
-.brand-t { color: #ffffff; font-weight: 800; font-size: 1.1rem; line-height: 1.2; }
-.brand-s { color: #9cc7d2; font-size: 0.75rem; }
-.side-proj { background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.14); border-radius: 14px; padding: 10px 14px; color: #ffffff; font-weight: 600; font-size: 0.9rem; margin-bottom: 14px; }
-.side-proj span { display: block; font-size: 0.65rem; letter-spacing: 1px; color: #7fd8c0; font-weight: 700; }
-.side-h { color: #ffffff; font-weight: 700; margin: 18px 0 6px 0; }
-section[data-testid="stSidebar"] .stButton > button { justify-content: flex-start; text-align: left; border-radius: 16px; border: none; padding: 0.7rem 1rem; font-weight: 600; background: rgba(255,255,255,0.07); color: #d7ebf0; margin-top: 6px; }
-section[data-testid="stSidebar"] .stButton > button p { color: inherit !important; }
-section[data-testid="stSidebar"] .stButton > button:hover { background: rgba(255,255,255,0.15); color: #ffffff; }
-section[data-testid="stSidebar"] [data-testid="stBaseButton-primary"], section[data-testid="stSidebar"] button[kind="primary"] { background: #ffffff !important; color: #0d3d4a !important; box-shadow: 0 6px 16px rgba(0,0,0,0.18); }
-section[data-testid="stSidebar"] div[data-baseweb="input"], section[data-testid="stSidebar"] div[data-baseweb="base-input"], section[data-testid="stSidebar"] div[data-baseweb="select"] > div { background: rgba(255,255,255,0.10) !important; border-color: rgba(255,255,255,0.18) !important; border-radius: 12px !important; }
-section[data-testid="stSidebar"] input { color: #ffffff !important; -webkit-text-fill-color: #ffffff !important; }
-section[data-testid="stSidebar"] div[data-baseweb="select"] * { color: #ffffff !important; }
-section[data-testid="stSidebar"] [data-testid="stNumberInputStepDown"], section[data-testid="stSidebar"] [data-testid="stNumberInputStepUp"] { background: transparent !important; color: #ffffff !important; }
-section[data-testid="stSidebar"] [data-testid="stSliderThumbValue"], section[data-testid="stSidebar"] [data-testid="stTickBarMin"], section[data-testid="stSidebar"] [data-testid="stTickBarMax"] { color: #7fd8c0 !important; }
-
-/* ---------- HERO, CARD, TAB ---------- */
-.hero { background: linear-gradient(135deg, #115569 0%, #0b3a47 100%); border-radius: 22px; padding: 26px 32px; color: #ffffff; margin-bottom: 22px; box-shadow: 0 14px 30px -8px rgba(11,58,71,0.35); border: 1px solid rgba(255,255,255,0.15); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 14px; }
-.hero h1 { margin: 0; font-size: 1.8rem; font-weight: 800; color: #ffffff; letter-spacing: -0.5px; }
-.hero p { margin: 6px 0 0 0; color: #b9dbe3; font-size: 0.95rem; }
-.hero-r { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
-.chip { background: rgba(255,255,255,0.14); border: 1px solid rgba(255,255,255,0.25); padding: 8px 14px; border-radius: 999px; font-size: 0.82rem; font-weight: 600; color: #ffffff; }
+.hero {
+    background: linear-gradient(135deg, #0f172a 0%, #1e3c72 100%);
+    border-radius: 14px; padding: 28px 32px; color: #ffffff; margin-bottom: 22px;
+    box-shadow: 0 10px 25px -5px rgba(15,23,42,0.25);
+    display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 14px;
+}
+.hero h1 { margin: 0; font-size: 1.85rem; font-weight: 800; color: #ffffff; letter-spacing: -0.5px; }
+.hero p { margin: 6px 0 0 0; color: #cbd5e1; font-size: 0.95rem; }
 .badge { padding: 8px 16px; border-radius: 999px; font-size: 0.82rem; font-weight: 700; color: #ffffff; }
-.badge-user { background: #1c8fb5; }
+.badge-user { background: #2563eb; }
 .badge-admin { background: #d97706; }
-.kpi { background: rgba(255,255,255,0.72); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.95); border-radius: 20px; padding: 18px 20px; box-shadow: 0 8px 24px rgba(15,80,100,0.08); height: 100%; }
-.kpi .label { font-size: 0.74rem; font-weight: 600; color: #5b7c86; text-transform: uppercase; letter-spacing: 0.6px; }
-.kpi .value { font-size: 1.85rem; font-weight: 800; color: #0d3d4a; margin: 6px 0 4px 0; }
-.kpi .detail { font-size: 0.8rem; color: #5b7c86; }
-.kpi.blue { border-top: 4px solid #1c8fb5; }
-.kpi.green { border-top: 4px solid #2fc29b; }
-.kpi.amber { border-top: 4px solid #f6c453; }
-.kpi.navy { border-top: 4px solid #115569; }
-.callout { background: rgba(255,255,255,0.65); border-left: 4px solid #1c8fb5; border-radius: 14px; padding: 14px 18px; color: #0d3d4a; font-size: 0.9rem; margin: 12px 0; }
-.total-box { background: linear-gradient(135deg, #115569 0%, #2fc29b 100%); color: #ffffff; border-radius: 20px; padding: 20px 26px; margin-top: 14px; box-shadow: 0 10px 24px rgba(17,85,105,0.25); }
+.kpi {
+    background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 18px 20px;
+    box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); height: 100%;
+}
+.kpi .label { font-size: 0.74rem; font-weight: 600; color: #64748b; text-transform: uppercase; letter-spacing: 0.6px; }
+.kpi .value { font-size: 1.85rem; font-weight: 800; color: #0f172a; margin: 6px 0 4px 0; }
+.kpi .detail { font-size: 0.8rem; color: #475569; }
+.kpi.blue { border-top: 4px solid #2563eb; }
+.kpi.green { border-top: 4px solid #10b981; }
+.kpi.amber { border-top: 4px solid #d97706; }
+.kpi.navy { border-top: 4px solid #1e3c72; }
+.callout {
+    background: #eff6ff; border-left: 4px solid #3b82f6; border-radius: 8px;
+    padding: 14px 18px; color: #1e3a8a; font-size: 0.9rem; margin: 12px 0;
+}
+.total-box {
+    background: linear-gradient(135deg, #059669 0%, #10b981 100%); color: #ffffff;
+    border-radius: 12px; padding: 20px 26px; margin-top: 14px;
+    box-shadow: 0 4px 6px -1px rgba(0,0,0,0.08);
+}
 .total-box .t1 { font-size: 0.8rem; font-weight: 600; opacity: 0.9; text-transform: uppercase; letter-spacing: 0.6px; }
 .total-box .t2 { font-size: 2rem; font-weight: 800; }
-.section-title { font-size: 1.05rem; font-weight: 700; color: #0d3d4a; margin: 18px 0 8px 0; }
-.gate { background: rgba(255,255,255,0.75); backdrop-filter: blur(10px); border: 1px solid #ffffff; border-radius: 24px; padding: 28px 30px 8px 30px; text-align: center; box-shadow: 0 12px 30px rgba(15,80,100,0.10); }
-.gate h2 { margin: 6px 0 4px 0; color: #0d3d4a; font-weight: 800; }
-.gate p { color: #5b7c86; font-size: 0.92rem; }
-.gate-ic { font-size: 2.4rem; }
-.stTabs [data-baseweb="tab-list"] { gap: 6px; background: rgba(255,255,255,0.55); padding: 6px; border-radius: 16px; }
-.stTabs [data-baseweb="tab"] { border-radius: 12px; padding: 8px 16px; font-weight: 600; }
-.stTabs [aria-selected="true"] { background: #115569; }
-.stTabs [aria-selected="true"] p { color: #ffffff !important; }
-.stTabs [data-baseweb="tab-highlight"], .stTabs [data-baseweb="tab-border"] { display: none; }
-div[data-testid="stMain"] [data-testid^="stBaseButton-primary"] { background: #0b5563; border: none; border-radius: 12px; font-weight: 700; letter-spacing: 0.5px; }
-div[data-testid="stMain"] [data-testid^="stBaseButton-primary"]:hover { background: #115569; }
-div[data-testid="stDataFrame"] { border-radius: 16px; overflow: hidden; }
+.section-title { font-size: 1.05rem; font-weight: 700; color: #0f172a; margin: 18px 0 8px 0; }
+section[data-testid="stSidebar"] { background: #ffffff; border-right: 1px solid #e2e8f0; }
+.stTabs [data-baseweb="tab"] { font-weight: 600; }
+[data-testid="stToolbar"], [data-testid="stAppDeployButton"], [data-testid="stDeployButton"], [data-testid="stMainMenu"], [data-testid="stToolbarActions"], #MainMenu, footer { display: none !important; visibility: hidden !important; }
 </style>
 """,
     unsafe_allow_html=True,
@@ -163,80 +139,41 @@ def callout(text):
 # ------------------------------------------------------------------ SIDEBAR
 ver = st.session_state.ver
 mat_names = [m["nama"] for m in db["materials"]]
-V = st.session_state.setdefault("vals", {})
-for _k, _v in {"p": 10.0, "t": 3.0, "buk": 3.0, "spesi": 1.5, "waste": 5}.items():
-    V.setdefault(_k, _v)
-if V.get("mat") not in mat_names:
-    V["mat"] = mat_names[0]
-    st.session_state.pop("w_mat", None)
-if st.session_state.get("w_mat") not in (None, *mat_names):
-    st.session_state.pop("w_mat", None)
-st.session_state.setdefault("menu", "geo")
-proyek = st.session_state.get("proyek", "")
-
-
-def set_menu(k):
-    st.session_state.menu = None if st.session_state.menu == k else k
-
-
-def ganti_proyek():
-    st.session_state.proyek_last = st.session_state.get("proyek", "")
-    st.session_state.proyek = ""
-
-
-def price_state():
-    m = next(x for x in db["materials"] if x["nama"] == V["mat"])
-    kb, ks, kp = f"hb_{ver}_{V['mat']}", f"hs_{ver}", f"hp_{ver}"
-    V.setdefault(kb, float(m["harga"]))
-    V.setdefault(ks, float(db["semen_sak"]))
-    V.setdefault(kp, float(db["pasir_m3"]))
-    return m, kb, ks, kp
-
-
-def field(sec, kind, key, label, **kw):
-    # Widget hanya digambar saat menunya terbuka; nilainya selalu tersimpan di V
-    if proyek and st.session_state.menu == sec:
-        wk = "w_" + key
-        st.session_state.setdefault(wk, V[key])
-        fn = {"num": st.number_input, "sel": st.selectbox, "sld": st.slider}[kind]
-        V[key] = fn(label, key=wk, **kw)
-    return V[key]
-
 
 with st.sidebar:
-    st.markdown(
-        '<div class="brand"><div class="brand-logo">🧱</div><div><div class="brand-t">CivilCalc Pro</div>'
-        '<div class="brand-s">Estimator Dinding 1/2 Batu</div></div></div>',
-        unsafe_allow_html=True,
+    st.markdown("## 🧱 CivilCalc Pro")
+    st.caption("Estimator Dinding 1/2 Batu")
+
+    st.markdown("### 📐 Geometri Dinding")
+    panjang_dinding = st.number_input("Panjang dinding (m)", min_value=0.1, value=10.0, step=0.5)
+    tinggi_dinding = st.number_input("Tinggi dinding (m)", min_value=0.1, value=3.0, step=0.1)
+    luas_bukaan = st.number_input("Luas bukaan pintu/jendela (m²)", min_value=0.0, value=3.0, step=0.5)
+
+    st.markdown("### 🧱 Spesifikasi Material")
+    mat_pilih = st.selectbox("Jenis material dinding", mat_names)
+    tebal_spesi = st.slider("Tebal spesi (cm)", 0.5, 3.0, 1.5, 0.1)
+    waste = st.slider("Waste / susut (%)", 0, 25, 5, 1)
+
+    mat = next(m for m in db["materials"] if m["nama"] == mat_pilih)
+
+    st.markdown("### 💰 Harga Satuan Material")
+    st.caption("Terisi otomatis dari database Admin, bisa Anda ubah.")
+    harga_bata = st.number_input(
+        "Harga bata (Rp/buah)", min_value=0.0, value=float(mat["harga"]), step=50.0,
+        format="%.0f", key=f"hb_{ver}_{mat_pilih}",
     )
-    if proyek:
-        st.markdown(f'<div class="side-proj"><span>PROYEK</span>{html.escape(proyek)}</div>', unsafe_allow_html=True)
-        for k, ic, lb in (("geo", "📐", "Geometri Dinding"), ("mat", "🧱", "Spesifikasi Material"), ("hrg", "💰", "Harga Satuan Material")):
-            st.button(
-                f"{ic}  {lb}", key=f"nav_{k}", on_click=set_menu, args=(k,), use_container_width=True,
-                type="primary" if st.session_state.menu == k else "secondary",
-            )
-            if k == "geo":
-                field("geo", "num", "p", "Panjang dinding (m)", min_value=0.1, step=0.5)
-                field("geo", "num", "t", "Tinggi dinding (m)", min_value=0.1, step=0.1)
-                field("geo", "num", "buk", "Luas bukaan pintu/jendela (m²)", min_value=0.0, step=0.5)
-            elif k == "mat":
-                field("mat", "sel", "mat", "Jenis material dinding", options=mat_names)
-                field("mat", "sld", "spesi", "Tebal spesi (cm)", min_value=0.5, max_value=3.0, step=0.1)
-                field("mat", "sld", "waste", "Waste / susut (%)", min_value=0, max_value=25, step=1)
-            else:
-                _, kb, ks, kp = price_state()
-                if st.session_state.menu == "hrg":
-                    st.caption("Terisi otomatis dari database Admin, bisa Anda ubah.")
-                field("hrg", "num", kb, "Harga bata (Rp/buah)", min_value=0.0, step=50.0, format="%.0f")
-                field("hrg", "num", ks, "Harga semen (Rp/sak 40kg)", min_value=0.0, step=1000.0, format="%.0f")
-                field("hrg", "num", kp, "Harga pasir (Rp/m³)", min_value=0.0, step=5000.0, format="%.0f")
-        st.button("✏️  Ganti Nama Proyek", key="nav_ren", on_click=ganti_proyek, use_container_width=True)
-    else:
-        st.caption("Isi nama proyek di halaman utama untuk mulai menghitung.")
+    harga_semen = st.number_input(
+        "Harga semen (Rp/sak 40kg)", min_value=0.0, value=float(db["semen_sak"]), step=1000.0,
+        format="%.0f", key=f"hs_{ver}",
+    )
+    harga_pasir = st.number_input(
+        "Harga pasir (Rp/m³)", min_value=0.0, value=float(db["pasir_m3"]), step=5000.0,
+        format="%.0f", key=f"hp_{ver}",
+    )
 
     if admin_available:
-        st.markdown('<div class="side-h">🔐 Akses Admin (Owner)</div>', unsafe_allow_html=True)
+        st.markdown("---")
+        st.markdown("### 🔐 Akses Admin (Owner)")
         if st.session_state.admin:
             st.success("Admin Mode aktif")
             if st.button("Keluar dari Admin", use_container_width=True):
@@ -250,12 +187,6 @@ with st.sidebar:
                     st.rerun()
                 else:
                     st.error("Password salah.")
-
-mat_pilih = V["mat"]
-mat, _kb, _ks, _kp = price_state()
-panjang_dinding, tinggi_dinding, luas_bukaan = V["p"], V["t"], V["buk"]
-tebal_spesi, waste = V["spesi"], V["waste"]
-harga_bata, harga_semen, harga_pasir = V[_kb], V[_ks], V[_kp]
 
 # ------------------------------------------------------------------ CORE ENGINE
 p = mat["p"] / 100.0
@@ -293,7 +224,6 @@ rab = pd.DataFrame(
 )
 
 # ------------------------------------------------------------------ HERO
-chip = f'<span class="chip">📁 {html.escape(proyek)}</span>' if proyek else ''
 badge = (
     '<span class="badge badge-admin">🔓 Admin Mode Active</span>'
     if is_admin
@@ -302,29 +232,9 @@ badge = (
 st.markdown(
     f'<div class="hero"><div><h1>🧱 CivilCalc Pro</h1>'
     f'<p>Estimator Dinding 1/2 Batu &amp; CMS Admin Panel &mdash; hitung volume material dan RAB secara presisi</p></div>'
-    f'<div class="hero-r">{chip}{badge}</div></div>',
+    f'<div>{badge}</div></div>',
     unsafe_allow_html=True,
 )
-
-if not proyek:
-    _, mid, _ = st.columns([1, 2, 1])
-    with mid:
-        st.markdown(
-            '<div class="gate"><div class="gate-ic">🏗️</div><h2>Mulai Proyek Baru</h2>'
-            '<p>Isi nama proyek terlebih dahulu sebelum memasukkan data dinding. '
-            'Nama ini akan tampil di dashboard, RAB, dan laporan ekspor.</p></div>',
-            unsafe_allow_html=True,
-        )
-        with st.form("form_proyek"):
-            nm = st.text_input("Nama proyek", value=st.session_state.get("proyek_last", ""),
-                               placeholder="contoh: Rumah Pak Budi - Dinding Lantai 1")
-            if st.form_submit_button("MULAI HITUNG", type="primary", use_container_width=True):
-                if nm.strip():
-                    st.session_state.proyek = nm.strip()
-                    st.rerun()
-                else:
-                    st.error("Nama proyek wajib diisi.")
-    st.stop()
 
 if is_admin:
     tab1, tab2, tab3, tab4 = st.tabs(
@@ -372,7 +282,7 @@ with tab1:
 
 # ------------------------------------------------------------------ TAB 2
 with tab2:
-    st.markdown(f'<div class="section-title">Rekapitulasi RAB Material &mdash; {html.escape(proyek)}</div>', unsafe_allow_html=True)
+    st.markdown('<div class="section-title">Rekapitulasi Rencana Anggaran Biaya (RAB) Material</div>', unsafe_allow_html=True)
     tampil = rab.copy()
     tampil["Volume"] = [f"{n_total:,}".replace(",", "."), str(semen_sak), num(pasir_m3)]
     tampil["Harga Satuan (Rp)"] = tampil["Harga Satuan (Rp)"].map(rp)
@@ -386,7 +296,7 @@ with tab2:
                 names=["Bata", "Semen", "Pasir"],
                 values=[biaya_bata, biaya_semen, biaya_pasir],
                 hole=0.55,
-                color_discrete_sequence=["#115569", "#f6c453", "#2fc29b"],
+                color_discrete_sequence=["#2563eb", "#d97706", "#10b981"],
                 title="Proporsi Alokasi Biaya Material",
             )
             fig.update_traces(textinfo="percent+label", hovertemplate="%{label}: Rp %{value:,.0f}<extra></extra>")
@@ -545,12 +455,12 @@ with tab4:
     params = pd.DataFrame(
         {
             "Parameter": [
-                "Nama proyek", "Material", "Dimensi bata p x b x t (cm)", "Panjang dinding (m)", "Tinggi dinding (m)", "Luas gross (m2)",
+                "Material", "Dimensi bata p x b x t (cm)", "Panjang dinding (m)", "Tinggi dinding (m)", "Luas gross (m2)",
                 "Luas bukaan (m2)", "Luas netto (m2)", "Tebal spesi (cm)", "Waste (%)", "Rasio campuran",
                 "Volume spesi (m3)", "Semen (kg)",
             ],
             "Nilai": [
-                proyek, mat_pilih, f"{mat['p']:g} x {mat['b']:g} x {mat['t']:g}", f"{panjang_dinding:.2f}", f"{tinggi_dinding:.2f}",
+                mat_pilih, f"{mat['p']:g} x {mat['b']:g} x {mat['t']:g}", f"{panjang_dinding:.2f}", f"{tinggi_dinding:.2f}",
                 f"{luas_gross:.2f}", f"{luas_bukaan:.2f}", f"{a_netto:.2f}", f"{tebal_spesi:.1f}", f"{waste}",
                 db["mortar"]["ratio"], f"{v_spesi:.4f}", f"{semen_kg:.2f}",
             ],
