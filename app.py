@@ -525,11 +525,14 @@ function layout(){const w=Math.max(280,Math.min(1100,(document.documentElement.c
  X0=M*S;GY=(0.25+rise+B+H+B)*S;WB=GY-B*S;WT=WB-H*S;}
 layout();
 const pe=C.p+C.s,te=C.t+C.s,rows=Math.ceil(H/te),BR=[];
+C.ops.forEach(o=>{const y0=Math.floor(o.y/te+1e-6)*te,y1=Math.round((o.y+o.h)/te)*te;o.y=y0;o.h=Math.max(te,y1-y0);});
 for(let r=0;r<rows;r++){const y=r*te,off=(r%2)?pe/2:0;
  for(let c=-1;c*pe+off<L;c++){const a=Math.max(0,c*pe+off),e=Math.min(L,c*pe+off+C.p),h=Math.min(C.t,H-y);
   if(e-a<0.02||h<0.01)continue;
-  if(C.ops.some(o=>a<o.x+o.w&&e>o.x&&y<o.y+o.h&&y+h>o.y))continue;
-  BR.push([a,y,e-a,h]);}}
+  let segs=[[a,e]];
+  C.ops.forEach(o=>{if(y<o.y+o.h-1e-6&&y+h>o.y+1e-6){const nx=[];
+   segs.forEach(s=>{if(s[1]<=o.x||s[0]>=o.x+o.w){nx.push(s);}else{if(s[0]<o.x)nx.push([s[0],o.x]);if(s[1]>o.x+o.w)nx.push([o.x+o.w,s[1]]);}});segs=nx;}});
+  segs.forEach(s=>{if(s[1]-s[0]>=0.015)BR.push([s[0],y,s[1]-s[0],h]);});}}
 const m=Math.max(2,Math.round(L/3.5)+1),KC=[];
 for(let i=0;i<m;i++){let cx=i*(L-0.15)/(m-1);const o=C.ops.find(o=>cx<o.x+o.w&&cx+0.15>o.x);if(o)cx=(o.x-0.2>=0)?o.x-0.2:o.x+o.w+0.05;KC.push(cx);}
 const R=(c,px,py,w,h)=>{x.fillStyle=c;x.fillRect(px,py,w,h);};
