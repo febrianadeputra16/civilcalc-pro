@@ -44,8 +44,10 @@ def default_db():
             {"nama": "Bata Interlock", "p": 30.0, "b": 14.0, "t": 10.0, "harga": 3500.0},
         ],
         "semen_sak": 70000.0,
+        "semen_sak50": 87500.0,
+        "perekat_sak": 80000.0,
         "pasir_m3": 280000.0,
-        "mortar": {"ratio": "1:4", "semen_kg_m3": 325.0, "pasir_m3_m3": 0.60},
+        "mortar": {"ratio": "1:4", "semen_kg_m3": 325.0, "pasir_m3_m3": 0.60, "fas": 0.5},
     }
 
 
@@ -60,6 +62,9 @@ def init_state():
 
 init_state()
 db = st.session_state.db
+db.setdefault("semen_sak50", 87500.0)
+db.setdefault("perekat_sak", 80000.0)
+db["mortar"].setdefault("fas", 0.5)
 
 # Fitur admin hanya muncul jika link dibuka dengan ?owner=<OWNER_KEY>
 admin_available = bool(OWNER_KEY) and bool(ADMIN_PASSWORD) and st.query_params.get("owner") == OWNER_KEY
@@ -151,6 +156,13 @@ div[data-testid="stDataFrame"] { border-radius: 16px; overflow: hidden; }
 .gate { border-radius: 24px 24px 0 0; margin-bottom: -1rem; }
 div[data-testid="stForm"] { background: rgba(255,255,255,0.75); border: 1px solid #ffffff; border-top: none; border-radius: 0 0 24px 24px; }
 :root { color-scheme: light; }
+div[data-testid="stMain"] p, div[data-testid="stMain"] label, div[data-testid="stMain"] [data-testid="stWidgetLabel"] p, div[data-testid="stMain"] [data-testid="stCaptionContainer"] { color: #0d3d4a; }
+.hero p { color: #d6edf2 !important; }
+.kpi .label { color: #1f3b45 !important; font-weight: 700; }
+.kpi .detail { color: #2b4650 !important; }
+.callout, .callout b { color: #0d3d4a !important; }
+.stTabs [data-baseweb="tab"] p { color: #0d3d4a !important; font-weight: 700; }
+.stTabs [aria-selected="true"] p { color: #ffffff !important; }
 [data-testid="InputInstructions"], [data-testid="stHeaderActionElements"] { display: none !important; }
 .hero-t { margin: 0; font-size: 1.8rem; font-weight: 800; color: #ffffff; letter-spacing: -0.5px; }
 .gate { padding: 18px 30px 4px 30px; }
@@ -179,41 +191,42 @@ def callout(text):
 
 
 # ------------------------------------------------------------------ SIDEBAR
+def g(x):
+    return f"{x:.4f}".rstrip("0").rstrip(".").replace(".", ",")
+
+
 ver = st.session_state.ver
 mat_names = [m["nama"] for m in db["materials"]]
 V = st.session_state.setdefault("vals", {})
-for _k, _v in {"p": 10.0, "t": 3.0, "buk": 3.0, "spesi": 1.5, "waste": 5}.items():
+for _k, _v in {"p": 10.0, "t": 3.0, "buk": 3.0, "spesi": 1.5, "waste": 5, "sak": 40}.items():
     V.setdefault(_k, _v)
 if V.get("mat") not in mat_names:
     V["mat"] = mat_names[0]
     st.session_state.pop("w_mat", None)
 if st.session_state.get("w_mat") not in (None, *mat_names):
     st.session_state.pop("w_mat", None)
-st.session_state.setdefault("menu", "geo")
+st.session_state.setdefault("page", "home")
 proyek = st.session_state.get("proyek", "")
+PEREKAT_CM, PEREKAT_KG_M3, PEREKAT_SAK_KG = 0.3, 1700.0, 40.0
 
 
-def set_menu(k):
-    st.session_state.menu = None if st.session_state.menu == k else k
-
-
-def ganti_proyek():
-    st.session_state.proyek_last = st.session_state.get("proyek", "")
-    st.session_state.proyek = ""
+def set_page(k):
+    st.session_state.page = k
 
 
 def price_state():
     m = next(x for x in db["materials"] if x["nama"] == V["mat"])
-    kb, ks, kp = f"hb_{ver}_{V['mat']}", f"hs_{ver}", f"hp_{ver}"
+    kb, ks, kp, km = f"hb_{ver}_{V['mat']}", f"hs{V['sak']}_{ver}", f"hp_{ver}", f"hm_{ver}"
     V.setdefault(kb, float(m["harga"]))
-    V.setdefault(ks, float(db["semen_sak"]))
+    V.setdefault(ks, float(db["semen_sak"] if V["sak"] == 40 else db["semen_sak50"]))
     V.setdefault(kp, float(db["pasir_m3"]))
-    return m, kb, ks, kp
+    V.setdefault(km, float(db["perekat_sak"]))
+    return m, kb, ks, kp, km
 
 
 def field(sec, kind, key, label, **kw):
-    # Widget hanya digambar saat menunya terbuka; nilainya selalu tersimpan di V
-    if proyek and st.session_state.menu == sec:
+    # Widget hanya digambar di halamannya; nilai selalu tersimpan di V
+    if proyek and st.session_state.page == sec:
         wk = "w_" + key
         st.session_state.setdefault(wk, V[key])
         fn = {"num": st.number_input, "sel": st.selectbox, "sld": st.slider}[kind]
@@ -232,27 +245,9 @@ with st.sidebar:
         if _nm.strip() and _nm.strip() != proyek:
             st.session_state.proyek = _nm.strip()
             st.rerun()
-        for k, ic, lb in (("geo", "📐", "Geometri Dinding"), ("mat", "🧱", "Spesifikasi Material"), ("hrg", "💰", "Harga Satuan Material")):
-            st.button(
-                f"{ic}  {lb}", key=f"nav_{k}", on_click=set_menu, args=(k,), use_container_width=True,
-                type="primary" if st.session_state.menu == k else "secondary",
-            )
-            if k == "geo":
-                field("geo", "num", "p", "Panjang dinding (m)", min_value=0.1, step=0.5)
-                field("geo", "num", "t", "Tinggi dinding (m)", min_value=0.1, step=0.1)
-                field("geo", "num", "buk", "Luas bukaan pintu/jendela (m²)", min_value=0.0, step=0.5)
-            elif k == "mat":
-                field("mat", "sel", "mat", "Jenis material dinding", options=mat_names)
-                field("mat", "sld", "spesi", "Tebal spesi (cm)", min_value=0.5, max_value=3.0, step=0.1)
-                field("mat", "sld", "waste", "Waste / susut (%)", min_value=0, max_value=25, step=1)
-            else:
-                _, kb, ks, kp = price_state()
-                if st.session_state.menu == "hrg":
-                    st.caption("Terisi otomatis dari database Admin, bisa Anda ubah.")
-                field("hrg", "num", kb, "Harga bata (Rp/buah)", min_value=0.0, step=50.0, format="%.0f")
-                field("hrg", "num", ks, "Harga semen (Rp/sak 40kg)", min_value=0.0, step=1000.0, format="%.0f")
-                field("hrg", "num", kp, "Harga pasir (Rp/m³)", min_value=0.0, step=5000.0, format="%.0f")
-
+        for k, ic, lb in (("home", "📊", "Dashboard"), ("geo", "📐", "Geometri Dinding"), ("mat", "🧱", "Spesifikasi Material"), ("hrg", "💰", "Harga Satuan Material")):
+            st.button(f"{ic}  {lb}", key=f"nav_{k}", on_click=set_page, args=(k,), use_container_width=True,
+                      type="primary" if st.session_state.page == k else "secondary")
     if admin_available:
         st.markdown('<div class="side-h">🔐 Akses Admin (Owner)</div>', unsafe_allow_html=True)
         if st.session_state.admin:
@@ -269,46 +264,54 @@ with st.sidebar:
                 else:
                     st.error("Password salah.")
 
-mat_pilih = V["mat"]
-mat, _kb, _ks, _kp = price_state()
-panjang_dinding, tinggi_dinding, luas_bukaan = V["p"], V["t"], V["buk"]
-tebal_spesi, waste = V["spesi"], V["waste"]
-harga_bata, harga_semen, harga_pasir = V[_kb], V[_ks], V[_kp]
-
 # ------------------------------------------------------------------ CORE ENGINE
-p = mat["p"] / 100.0
-b = mat["b"] / 100.0
-t = mat["t"] / 100.0
-s = tebal_spesi / 100.0
-
+mat_pilih = V["mat"]
+mat, _kb, _ks, _kp, _km = price_state()
+is_ringan, is_merah = "ringan" in mat_pilih.lower(), "merah" in mat_pilih.lower()
+sak_kg = float(V["sak"])
+panjang_dinding, tinggi_dinding, luas_bukaan, waste = V["p"], V["t"], V["buk"], V["waste"]
+tebal_spesi = PEREKAT_CM if is_ringan else V["spesi"]
+harga_bata, harga_semen, harga_pasir, harga_perekat = V[_kb], V[_ks], V[_kp], V[_km]
+fas = db["mortar"]["fas"]
+p, b, t, s = mat["p"] / 100.0, mat["b"] / 100.0, mat["t"] / 100.0, tebal_spesi / 100.0
 luas_gross = panjang_dinding * tinggi_dinding
 a_netto = max(0.0, luas_gross - luas_bukaan)
-p_ef = p + s
-t_ef = t + s
+p_ef, t_ef = p + s, t + s
 area_unit_ef = p_ef * t_ef
 unit_teoritis = a_netto / area_unit_ef
-n_total = math.ceil(unit_teoritis * (1 + waste / 100.0))
 vol_dinding = a_netto * b
 vol_unit_murni = unit_teoritis * (p * b * t)
-v_spesi = max(0.0, vol_dinding - vol_unit_murni)
-semen_kg = v_spesi * db["mortar"]["semen_kg_m3"]
-semen_sak = math.ceil(semen_kg / SAK_KG)
-pasir_m3 = round(v_spesi * db["mortar"]["pasir_m3_m3"], 2)
 
-biaya_bata = n_total * harga_bata
-biaya_semen = semen_sak * harga_semen
-biaya_pasir = pasir_m3 * harga_pasir
-biaya_total = biaya_bata + biaya_semen + biaya_pasir
 
-rab = pd.DataFrame(
-    {
-        "Uraian Material": [f"{mat_pilih} ({mat['p']:g}x{mat['b']:g}x{mat['t']:g} cm)", "Semen Portland (sak 40 kg)", "Pasir Pasang (m³)"],
-        "Volume": [n_total, semen_sak, pasir_m3],
-        "Satuan": ["buah", "sak", "m³"],
-        "Harga Satuan (Rp)": [harga_bata, harga_semen, harga_pasir],
-        "Subtotal (Rp)": [biaya_bata, biaya_semen, biaya_pasir],
-    }
-)
+def hitung(net):
+    teo = net / area_unit_ef
+    vs = max(0.0, net * b - teo * (p * b * t))
+    r = {"n": math.ceil(teo * (1 + waste / 100.0)), "vs": vs, "semen_kg": 0.0, "sak": 0, "pasir": 0.0, "per_kg": 0.0, "per_sak": 0, "air": 0.0}
+    if is_ringan:
+        r["per_kg"] = vs * PEREKAT_KG_M3
+        r["per_sak"] = math.ceil(r["per_kg"] / PEREKAT_SAK_KG)
+    else:
+        r["semen_kg"] = vs * db["mortar"]["semen_kg_m3"]
+        r["sak"] = math.ceil(r["semen_kg"] / sak_kg)
+        r["pasir"] = round(vs * db["mortar"]["pasir_m3_m3"], 2)
+        if is_merah:
+            r["air"] = r["semen_kg"] * fas
+    return r
+
+
+R = hitung(a_netto)
+n_total, v_spesi, semen_kg, semen_sak, pasir_m3 = R["n"], R["vs"], R["semen_kg"], R["sak"], R["pasir"]
+per_kg, per_sak, air_l = R["per_kg"], R["per_sak"], R["air"]
+rows = [(f"{mat_pilih} ({g(mat['p'])}×{g(mat['b'])}×{g(mat['t'])} cm)", n_total, "buah", harga_bata, "Bata")]
+if is_ringan:
+    rows.append(("Mortar Perekat Bata Ringan (sak 40 kg)", per_sak, "sak", harga_perekat, "Mortar Perekat"))
+else:
+    rows.append((f"Semen Portland (sak {g(sak_kg)} kg)", semen_sak, "sak", harga_semen, "Semen"))
+    rows.append(("Pasir Pasang", pasir_m3, "m³", harga_pasir, "Pasir"))
+    if is_merah:
+        rows.append((f"Air Adukan (FAS {g(fas)})", air_l, "liter", 0.0, "Air"))
+rab = pd.DataFrame([{"Uraian Material": r[0], "Volume": r[1], "Satuan": r[2], "Harga Satuan (Rp)": r[3], "Subtotal (Rp)": r[1] * r[3], "Ringkas": r[4]} for r in rows])
+biaya_total = float(rab["Subtotal (Rp)"].sum())
 
 # ------------------------------------------------------------------ HERO
 chip = f'<span class="chip">📁 {html.escape(proyek)}</span>' if proyek else ''
@@ -345,6 +348,45 @@ if not proyek:
                     st.error("Nama proyek wajib diisi.")
     st.stop()
 
+if st.session_state.page != "home":
+    _pg = st.session_state.page
+    _titles = {"geo": "📐 Geometri Dinding", "mat": "🧱 Spesifikasi Material", "hrg": "💰 Harga Satuan Material"}
+    st.markdown(f'<div class="section-title">{_titles[_pg]}</div>', unsafe_allow_html=True)
+    c1, c2, c3 = st.columns(3)
+    if _pg == "geo":
+        with c1:
+            field("geo", "num", "p", "Panjang dinding (m)", min_value=0.1, step=0.5)
+        with c2:
+            field("geo", "num", "t", "Tinggi dinding (m)", min_value=0.1, step=0.1)
+        with c3:
+            field("geo", "num", "buk", "Luas bukaan pintu/jendela (m²)", min_value=0.0, step=0.5)
+    elif _pg == "mat":
+        with c1:
+            field("mat", "sel", "mat", "Jenis material dinding", options=mat_names)
+        with c2:
+            if "ringan" in V["mat"].lower():
+                st.info("Bata ringan memakai mortar perekat tipis 0,3 cm, jadi tebal spesi tidak dipakai.")
+            else:
+                field("mat", "sld", "spesi", "Tebal spesi (cm)", min_value=0.5, max_value=3.0, step=0.1)
+        with c3:
+            field("mat", "sld", "waste", "Waste / susut bata (%)", min_value=0, max_value=30, step=1)
+    else:
+        with c1:
+            field("hrg", "sel", "sak", "Ukuran sak semen", options=[40, 50], format_func=lambda x: f"{x} kg")
+        _, kb_, ks_, kp_, km_ = price_state()
+        with c2:
+            field("hrg", "num", kb_, "Harga bata (Rp/buah)", min_value=0.0, step=50.0, format="%.0f")
+        with c3:
+            field("hrg", "num", ks_, f"Harga semen (Rp/sak {V['sak']} kg)", min_value=0.0, step=1000.0, format="%.0f")
+        d1, d2, d3 = st.columns(3)
+        with d1:
+            field("hrg", "num", kp_, "Harga pasir (Rp/m³)", min_value=0.0, step=5000.0, format="%.0f")
+        with d2:
+            field("hrg", "num", km_, "Harga mortar perekat (Rp/sak 40 kg)", min_value=0.0, step=1000.0, format="%.0f")
+        st.caption("Harga bata mengikuti material yang dipilih. Mortar perekat hanya dipakai untuk bata ringan.")
+    st.button("📊 Lihat Hasil di Dashboard", on_click=set_page, args=("home",), type="primary")
+    st.stop()
+
 if is_admin:
     tab1, tab2, tab_sim, tab3, tab4 = st.tabs(
         ["📊 Dashboard Metrik Utama", "📈 Analisis Cost & RAB", "🎬 Simulasi Pemasangan", "⚙️ Panel Pengaturan Admin", "📄 Formulasi Teknik Sipil & Ekspor"]
@@ -358,100 +400,81 @@ else:
 
 # ------------------------------------------------------------------ TAB 1
 with tab1:
-    c1, c2, c3, c4 = st.columns(4)
-    c1.markdown(
+    cards = [
         kpi("Luas Netto Dinding", f"{num(a_netto)} m²", f"Gross {num(luas_gross)} m² − bukaan {num(luas_bukaan)} m²", "blue"),
-        unsafe_allow_html=True,
-    )
-    c2.markdown(
-        kpi("Total Kebutuhan Unit", f"{n_total:,} buah".replace(",", "."), f"Teoritis {num(unit_teoritis, 1)} + waste {waste}%", "amber"),
-        unsafe_allow_html=True,
-    )
-    c3.markdown(
-        kpi("Kebutuhan Semen", f"{semen_sak} sak", f"{num(semen_kg, 1)} kg &bull; rasio {db['mortar']['ratio']}", "navy"),
-        unsafe_allow_html=True,
-    )
-    c4.markdown(
-        kpi("Kebutuhan Pasir", f"{num(pasir_m3)} m³", f"{num(db['mortar']['pasir_m3_m3'])} m³ per m³ spesi", "green"),
-        unsafe_allow_html=True,
-    )
+        kpi("Total Kebutuhan Unit", f"{num(n_total, 0)} buah", f"Teoritis {num(unit_teoritis, 1)} + waste {num(waste, 0)}%", "amber"),
+    ]
+    if is_ringan:
+        cards.append(kpi("Mortar Perekat", f"{num(per_sak, 0)} sak", f"{num(per_kg, 1)} kg · sak {g(PEREKAT_SAK_KG)} kg", "navy"))
+    else:
+        cards.append(kpi("Kebutuhan Semen", f"{num(semen_sak, 0)} sak", f"{num(semen_kg, 1)} kg · sak {g(sak_kg)} kg · rasio {db['mortar']['ratio']}", "navy"))
+        cards.append(kpi("Kebutuhan Pasir", f"{num(pasir_m3)} m³", f"{num(db['mortar']['pasir_m3_m3'])} m³ per m³ spesi", "green"))
+    if is_merah:
+        cards.append(kpi("Kebutuhan Air", f"{num(air_l, 0)} liter", f"{num(air_l / 1000)} m³ · FAS {g(fas)}", "blue"))
+    for col, card in zip(st.columns(len(cards)), cards):
+        col.markdown(card, unsafe_allow_html=True)
 
     st.markdown('<div class="section-title">Ringkasan Spesifikasi Teknis Pasangan 1/2 Batu</div>', unsafe_allow_html=True)
     d1, d2, d3, d4 = st.columns(4)
-    d1.markdown(kpi("Volume Spesi", f"{num(v_spesi, 3)} m³", f"Dinding {num(vol_dinding, 3)} m³ − bata {num(vol_unit_murni, 3)} m³", "blue"), unsafe_allow_html=True)
-    d2.markdown(kpi("Tebal Dinding Murni", f"{mat['b']:g} cm", "Lebar bata (pasangan 1/2 batu)", "navy"), unsafe_allow_html=True)
-    d3.markdown(kpi("Dimensi Efektif Unit", f"{p_ef*100:.1f} × {t_ef*100:.1f} cm", f"Ukuran bata + spesi {tebal_spesi:g} cm", "amber"), unsafe_allow_html=True)
-    d4.markdown(kpi("Luas Efektif / Unit", f"{area_unit_ef*10000:.1f} cm²", f"≈ {num(1/area_unit_ef, 1)} unit per m²", "green"), unsafe_allow_html=True)
-
+    d1.markdown(kpi("Volume Spesi" if not is_ringan else "Volume Perekat", f"{num(v_spesi, 3)} m³", f"Dinding {num(vol_dinding, 3)} m³ − bata {num(vol_unit_murni, 3)} m³", "blue"), unsafe_allow_html=True)
+    d2.markdown(kpi("Tebal Dinding Murni", f"{g(mat['b'])} cm", "Lebar bata (pasangan 1/2 batu)", "navy"), unsafe_allow_html=True)
+    d3.markdown(kpi("Dimensi Efektif Unit", f"{num(p_ef * 100, 1)} × {num(t_ef * 100, 1)} cm", f"Ukuran bata + {'perekat' if is_ringan else 'spesi'} {g(tebal_spesi)} cm", "amber"), unsafe_allow_html=True)
+    d4.markdown(kpi("Luas Efektif / Unit", f"{num(area_unit_ef * 10000, 1)} cm²", f"≈ {num(1 / area_unit_ef, 1)} unit per m²", "green"), unsafe_allow_html=True)
     callout(
-        f"<b>Catatan:</b> Perhitungan memakai bata <b>{mat_pilih}</b> dengan campuran spesi <b>{db['mortar']['ratio']}</b> "
-        f"(semen {num(db['mortar']['semen_kg_m3'], 0)} kg/m³, pasir {num(db['mortar']['pasir_m3_m3'])} m³/m³ spesi). "
-        "Hasil bersifat estimasi awal; sesuaikan dengan kondisi lapangan dan standar proyek."
+        f"<b>Catatan:</b> bata <b>{mat_pilih}</b>"
+        + (" dipasang dengan mortar perekat tipis, tanpa semen-pasir." if is_ringan else f", campuran spesi <b>{db['mortar']['ratio']}</b>.")
+        + (" Kebutuhan air adalah air adukan saja (belum termasuk air untuk membasahi bata)." if is_merah else "")
+        + " Hasil berupa estimasi awal; sesuaikan dengan kondisi lapangan."
     )
 
 # ------------------------------------------------------------------ TAB 2
 with tab2:
     st.markdown(f'<div class="section-title">Rekapitulasi RAB Material &mdash; {html.escape(proyek)}</div>', unsafe_allow_html=True)
-    tampil = rab.copy()
-    tampil["Volume"] = [f"{n_total:,}".replace(",", "."), str(semen_sak), num(pasir_m3)]
-    tampil["Harga Satuan (Rp)"] = tampil["Harga Satuan (Rp)"].map(rp)
-    tampil["Subtotal (Rp)"] = tampil["Subtotal (Rp)"].map(rp)
+    tampil = rab.drop(columns="Ringkas").copy()
+    tampil["Volume"] = [num(v, 2 if u == "m³" else 0) for v, u in zip(rab["Volume"], rab["Satuan"])]
+    tampil["Harga Satuan (Rp)"] = ["-" if u == "liter" else rp(h) for h, u in zip(rab["Harga Satuan (Rp)"], rab["Satuan"])]
+    tampil["Subtotal (Rp)"] = ["-" if u == "liter" else rp(h) for h, u in zip(rab["Subtotal (Rp)"], rab["Satuan"])]
     st.dataframe(tampil, use_container_width=True, hide_index=True)
 
+    LAY = dict(font_family="Inter", font_color="#0d3d4a", separators=",.", paper_bgcolor="rgba(0,0,0,0)",
+               plot_bgcolor="rgba(255,255,255,0.55)", margin=dict(t=50, b=10, l=10, r=10))
+    PAL = ["#115569", "#f6c453", "#2fc29b", "#1c8fb5"]
+    bi = rab[rab["Subtotal (Rp)"] > 0]
     col_a, col_b = st.columns([3, 2])
     with col_a:
         if biaya_total > 0:
-            fig = px.pie(
-                names=["Bata", "Semen", "Pasir"],
-                values=[biaya_bata, biaya_semen, biaya_pasir],
-                hole=0.55,
-                color_discrete_sequence=["#115569", "#f6c453", "#2fc29b"],
-                title="Proporsi Alokasi Biaya Material",
-            )
+            fig = px.pie(names=bi["Ringkas"], values=bi["Subtotal (Rp)"], hole=0.55, color_discrete_sequence=PAL, title="Proporsi Alokasi Biaya Material")
             fig.update_traces(textinfo="percent+label", hovertemplate="%{label}: Rp %{value:,.0f}<extra></extra>")
-            fig.update_layout(
-                font_family="Inter", margin=dict(t=50, b=10, l=10, r=10),
-                paper_bgcolor="rgba(0,0,0,0)", legend=dict(orientation="h", y=-0.05),
-            )
+            fig.update_layout(legend=dict(orientation="h", y=-0.05), **LAY)
             st.plotly_chart(fig, use_container_width=True)
         else:
             st.info("Masukkan dimensi dinding untuk melihat grafik biaya.")
     with col_b:
-        st.markdown(
-            f'<div class="total-box"><div class="t1">Total Biaya Material Dinding</div>'
-            f'<div class="t2">{rp(biaya_total)}</div></div>',
-            unsafe_allow_html=True,
-        )
+        st.markdown(f'<div class="total-box"><div class="t1">Total Biaya Material Dinding</div><div class="t2">{rp(biaya_total)}</div></div>', unsafe_allow_html=True)
         per_m2 = biaya_total / a_netto if a_netto > 0 else 0
-        st.markdown(
-            kpi("Biaya Material per m²", rp(per_m2), f"Bata {rp(biaya_bata)} &bull; Semen {rp(biaya_semen)} &bull; Pasir {rp(biaya_pasir)}", "blue"),
-            unsafe_allow_html=True,
-        )
-
-    # ---- Diagram batang & garis
-    def total_untuk(net):
-        n = math.ceil(net / area_unit_ef * (1 + waste / 100.0))
-        vs = max(0.0, net * b - net / area_unit_ef * (p * b * t))
-        sak = math.ceil(vs * db["mortar"]["semen_kg_m3"] / SAK_KG)
-        return n * harga_bata + sak * harga_semen + round(vs * db["mortar"]["pasir_m3_m3"], 2) * harga_pasir
+        st.markdown(kpi("Biaya Material per m²", rp(per_m2), "Total biaya ÷ luas netto dinding", "blue"), unsafe_allow_html=True)
 
     if biaya_total > 0:
-        LAY = dict(font_family="Inter", paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(255,255,255,0.55)", margin=dict(t=50, b=10, l=10, r=10))
-        g1, g2 = st.columns(2)
-        with g1:
-            fb = px.bar(x=["Bata", "Semen", "Pasir"], y=[biaya_bata, biaya_semen, biaya_pasir], color=["Bata", "Semen", "Pasir"],
-                        color_discrete_sequence=["#115569", "#f6c453", "#2fc29b"], text_auto=",.0f",
-                        title="Diagram Batang: Biaya per Komponen", labels={"x": "", "y": "Rupiah"})
-            fb.update_layout(showlegend=False, **LAY)
-            st.plotly_chart(fb, use_container_width=True)
-        with g2:
-            xs = [round(a_netto * f / 10, 2) for f in range(0, 21)]
-            fl = px.line(x=xs, y=[total_untuk(x) for x in xs], markers=True, title="Diagram Garis: Biaya Total vs Luas Dinding",
-                         labels={"x": "Luas netto (m²)", "y": "Rupiah"}, color_discrete_sequence=["#115569"])
-            fl.add_scatter(x=[a_netto], y=[biaya_total], mode="markers", name="Kondisi saat ini",
-                           marker=dict(size=14, color="#f6c453", line=dict(width=2, color="#115569")))
-            fl.update_layout(showlegend=False, **LAY)
-            st.plotly_chart(fl, use_container_width=True)
+        fb = px.bar(x=bi["Ringkas"], y=bi["Subtotal (Rp)"], color=bi["Ringkas"], color_discrete_sequence=PAL, text_auto=",.0f",
+                    title="Diagram Batang: Biaya per Komponen", labels={"x": "", "y": "Rupiah"})
+        fb.update_layout(showlegend=False, **LAY)
+        st.plotly_chart(fb, use_container_width=True)
+
+        items = [("Bata", "n", "buah")]
+        items += [("Mortar Perekat", "per_sak", "sak")] if is_ringan else [("Semen", "sak", "sak"), ("Pasir", "pasir", "m³")]
+        items += [("Air", "air", "liter")] if is_merah else []
+        xs = [round(a_netto * f / 10, 2) for f in range(0, 21)]
+        hs = [hitung(x) for x in xs]
+        st.markdown('<div class="section-title">Diagram Garis: Kebutuhan Tiap Material vs Luas Dinding</div>', unsafe_allow_html=True)
+        for i in range(0, len(items), 2):
+            for col, (nm_, key, unit) in zip(st.columns(2), items[i:i + 2]):
+                with col:
+                    fl = px.line(x=xs, y=[h[key] for h in hs], markers=True, title=f"Kebutuhan {nm_}",
+                                 labels={"x": "Luas netto (m²)", "y": unit}, color_discrete_sequence=[PAL[(i // 2) % 4]])
+                    fl.add_scatter(x=[a_netto], y=[R[key]], mode="markers", name="Saat ini",
+                                   marker=dict(size=13, color="#f6c453", line=dict(width=2, color="#115569")))
+                    fl.update_layout(showlegend=False, **LAY)
+                    st.plotly_chart(fl, use_container_width=True)
 
 # ------------------------------------------------------------------ SIMULASI
 SIM_HTML = '''
@@ -465,13 +488,13 @@ SIM_HTML = '''
 const C=__CFG__;const S=document.getElementById("st");let tm=null,k=0;
 const W=Math.max(260,Math.min(640,window.innerWidth-24)),bw=W/(C.cols+0.5),bh=Math.max(10,bw*C.ratio),g=Math.max(2,bw*0.05);
 S.style.width=W+"px";S.style.height=(C.rows*bh+24)+"px";
-document.getElementById("nt").textContent="Cuplikan pola pasangan (skala disederhanakan). Kebutuhan aktual: "+C.total+" bata, ± "+C.rowsAll+" lapis.";
+document.getElementById("nt").textContent="Cuplikan pola pasangan (skala disederhanakan). Bata di ujung lapis dipotong setengah. Kebutuhan aktual: "+C.total+" bata, ± "+C.rowsAll+" lapis.";
 function reset(){clearInterval(tm);S.innerHTML="";k=0;document.getElementById("tx").textContent="Siap dipasang";}
 function play(){reset();tm=setInterval(step,110);}
 function step(){
  if(k>=C.rows*C.cols){clearInterval(tm);document.getElementById("tx").textContent="Selesai ✔ "+C.rows+" lapis × "+C.cols+" bata";return;}
  const r=Math.floor(k/C.cols),c=k%C.cols,y=S.clientHeight-(r+1)*bh-6;
- if(c===0){const m=document.createElement("div");m.style.cssText="position:absolute;left:0;width:"+W+"px;height:"+(g*1.6)+"px;background:#aebdc3;top:"+(y+bh-g)+"px;transform:scaleX(0);transform-origin:left;transition:transform .5s";S.appendChild(m);setTimeout(()=>m.style.transform="scaleX(1)",20);}
+ if(c===0){const m=document.createElement("div");m.style.cssText="position:absolute;left:0;width:"+W+"px;height:"+bh+"px;background:#aebdc3;top:"+y+"px;transform:scaleX(0);transform-origin:left;transition:transform .5s";S.appendChild(m);setTimeout(()=>m.style.transform="scaleX(1)",20);const h=document.createElement("div");h.style.cssText="position:absolute;border-radius:2px;width:"+(bw/2-g)+"px;height:"+(bh-g)+"px;left:"+(r%2?0:C.cols*bw)+"px;top:"+y+"px;background:"+C.color+";box-shadow:inset 0 -2px 0 rgba(0,0,0,.18)";S.appendChild(h);}
  const d=document.createElement("div");
  d.style.cssText="position:absolute;border-radius:2px;width:"+(bw-g)+"px;height:"+(bh-g)+"px;left:"+(c*bw+(r%2?bw/2:0))+"px;top:"+(y-60)+"px;opacity:0;background:"+C.color+";box-shadow:inset 0 -2px 0 rgba(0,0,0,.18);transition:all .3s ease-in";
  S.appendChild(d);requestAnimationFrame(()=>{d.style.top=y+"px";d.style.opacity="1";});
@@ -511,6 +534,16 @@ with tab3:
             if st.form_submit_button("💾 Simpan Harga Default", type="primary"):
                 db["semen_sak"] = float(new_semen)
                 db["pasir_m3"] = float(new_pasir)
+                st.session_state.ver += 1
+                st.rerun()
+
+        with st.form("form_extra"):
+            e1, e2, e3 = st.columns(3)
+            n50 = e1.number_input("Harga semen sak 50 kg (Rp)", min_value=0.0, value=float(db["semen_sak50"]), step=1000.0, format="%.0f")
+            nper = e2.number_input("Harga mortar perekat sak 40 kg (Rp)", min_value=0.0, value=float(db["perekat_sak"]), step=1000.0, format="%.0f")
+            nfas = e3.number_input("Faktor air-semen (FAS)", min_value=0.2, max_value=1.0, value=float(db["mortar"]["fas"]), step=0.05)
+            if st.form_submit_button("💾 Simpan Harga & Parameter Tambahan", type="primary"):
+                db["semen_sak50"], db["perekat_sak"], db["mortar"]["fas"] = float(n50), float(nper), float(nfas)
                 st.session_state.ver += 1
                 st.rerun()
 
@@ -604,54 +637,81 @@ with tab4:
     st.latex(r"N_{total} = \left\lceil \frac{A_{netto}}{(p+s)(t+s)} \times \left(1+\frac{W}{100}\right) \right\rceil")
     st.markdown("**3. Volume spesi / mortar**")
     st.latex(r"V_{spesi} = \max\left(0,\; A_{netto}\cdot b \;-\; \frac{A_{netto}}{(p+s)(t+s)}\,(p\cdot b\cdot t)\right)")
-    st.markdown("**4. Kebutuhan semen**")
-    st.latex(r"Semen_{kg} = V_{spesi} \times K_{semen}, \qquad Semen_{sak} = \left\lceil \frac{Semen_{kg}}{40} \right\rceil")
-    st.markdown("**5. Kebutuhan pasir**")
+    st.markdown("**4. Semen dan pasir (bata merah, interlock)**")
+    st.latex(r"Semen_{kg} = V_{spesi} \times K_{semen}, \qquad Semen_{sak} = \left\lceil \frac{Semen_{kg}}{" + g(sak_kg) + r"} \right\rceil")
     st.latex(r"Pasir_{m^3} = \mathrm{round}\left(V_{spesi} \times K_{pasir},\; 2\right)")
-    callout(
-        "Keterangan: <b>p</b> = panjang bata (m), <b>b</b> = lebar bata/tebal dinding (m), <b>t</b> = tinggi bata (m), "
-        "<b>s</b> = tebal spesi (m), <b>W</b> = waste (%), <b>K_semen</b> = kebutuhan semen per m³ spesi, "
-        "<b>K_pasir</b> = kebutuhan pasir per m³ spesi."
-    )
+    st.markdown("**5. Mortar perekat (bata ringan)**")
+    st.latex(r"Perekat_{kg} = V_{perekat} \times 1700, \qquad Perekat_{sak} = \left\lceil \frac{Perekat_{kg}}{40} \right\rceil")
+    st.markdown("**6. Air adukan (bata merah standar dan press)**")
+    st.latex(r"Air_{liter} = Semen_{kg} \times FAS")
+    callout("Keterangan: <b>p, b, t</b> = panjang, lebar, tinggi bata (m); <b>s</b> = tebal spesi atau perekat (m); <b>W</b> = waste (%); <b>K</b> = kebutuhan material per m³ spesi.")
 
-    st.markdown('<div class="section-title">Substitusi Nilai Saat Ini</div>', unsafe_allow_html=True)
-    st.code(
-        f"A_netto  = {luas_gross:.2f} - {luas_bukaan:.2f} = {a_netto:.2f} m2\n"
-        f"p_ef x t_ef = {p_ef:.4f} x {t_ef:.4f} = {area_unit_ef:.5f} m2\n"
-        f"Unit teoritis = {unit_teoritis:.2f}  ->  N_total = {n_total} buah\n"
-        f"V_spesi  = {vol_dinding:.4f} - {vol_unit_murni:.4f} = {v_spesi:.4f} m3\n"
-        f"Semen    = {semen_kg:.2f} kg = {semen_sak} sak\n"
-        f"Pasir    = {pasir_m3:.2f} m3\n"
-        f"Total    = {rp(biaya_total)}",
-        language="text",
-    )
+    st.markdown('<div class="section-title">Ekspor Laporan ke Excel</div>', unsafe_allow_html=True)
+    params = [("Nama proyek", proyek, ""), ("Material dinding", mat_pilih, ""),
+              ("Dimensi bata p × b × t", f"{g(mat['p'])} × {g(mat['b'])} × {g(mat['t'])}", "cm"),
+              ("Panjang dinding", panjang_dinding, "m"), ("Tinggi dinding", tinggi_dinding, "m"), ("Luas gross", luas_gross, "m²"),
+              ("Luas bukaan", luas_bukaan, "m²"), ("Luas netto", a_netto, "m²"),
+              ("Tebal perekat" if is_ringan else "Tebal spesi", tebal_spesi, "cm"), ("Waste bata", waste, "%"),
+              ("Volume spesi/perekat", v_spesi, "m³")]
+    if is_ringan:
+        params.append(("Kebutuhan mortar perekat", per_kg, "kg"))
+    else:
+        params += [("Rasio campuran", db["mortar"]["ratio"], ""), ("Ukuran sak semen", sak_kg, "kg"), ("Kebutuhan semen", semen_kg, "kg")]
+    if is_merah:
+        params.append(("Kebutuhan air", air_l, "liter"))
+    df_par = pd.DataFrame(params, columns=["Parameter", "Nilai", "Satuan"])
+    df_rab = rab.drop(columns="Ringkas")
+    st.dataframe(df_par.assign(Nilai=[num(v, 2) if isinstance(v, (int, float)) else v for v in df_par["Nilai"]]), use_container_width=True, hide_index=True)
 
-    st.markdown('<div class="section-title">Ekspor Laporan Rekapitulasi</div>', unsafe_allow_html=True)
-    params = pd.DataFrame(
-        {
-            "Parameter": [
-                "Nama proyek", "Material", "Dimensi bata p x b x t (cm)", "Panjang dinding (m)", "Tinggi dinding (m)", "Luas gross (m2)",
-                "Luas bukaan (m2)", "Luas netto (m2)", "Tebal spesi (cm)", "Waste (%)", "Rasio campuran",
-                "Volume spesi (m3)", "Semen (kg)",
-            ],
-            "Nilai": [
-                proyek, mat_pilih, f"{mat['p']:g} x {mat['b']:g} x {mat['t']:g}", f"{panjang_dinding:.2f}", f"{tinggi_dinding:.2f}",
-                f"{luas_gross:.2f}", f"{luas_bukaan:.2f}", f"{a_netto:.2f}", f"{tebal_spesi:.1f}", f"{waste}",
-                db["mortar"]["ratio"], f"{v_spesi:.4f}", f"{semen_kg:.2f}",
-            ],
-        }
-    )
-    rab_export = rab.copy()
-    rab_export.loc[len(rab_export)] = ["TOTAL BIAYA MATERIAL", "", "", "", biaya_total]
+    def buat_xlsx():
+        from io import BytesIO
+        from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
+        from openpyxl.worksheet.table import Table, TableStyleInfo
+        buf = BytesIO()
+        with pd.ExcelWriter(buf, engine="openpyxl") as xw:
+            df_par.to_excel(xw, sheet_name="Ringkasan", index=False, startrow=3)
+            df_rab.to_excel(xw, sheet_name="RAB", index=False, startrow=3)
+            thin = Side(style="thin", color="B8C4C9")
+            for ws, title, widths in ((xw.sheets["Ringkasan"], "RINGKASAN PROYEK", (30, 30, 12)), (xw.sheets["RAB"], "RENCANA ANGGARAN BIAYA MATERIAL", (46, 14, 10, 20, 22))):
+                ws["A1"] = f"{title} - {proyek}"
+                ws["A1"].font = Font(bold=True, size=14, color="115569")
+                ws["A2"] = "CivilCalc Pro"
+                ws["A2"].font = Font(italic=True, color="5B7C86")
+                last = ws.max_row
+                ncol = len(widths)
+                for c, w in enumerate(widths, 1):
+                    ws.column_dimensions[chr(64 + c)].width = w
+                    h = ws.cell(row=4, column=c)
+                    h.font = Font(bold=True, color="FFFFFF")
+                    h.fill = PatternFill("solid", fgColor="115569")
+                    h.alignment = Alignment(horizontal="center", vertical="center")
+                for r in range(4, last + 1):
+                    for c in range(1, ncol + 1):
+                        ws.cell(row=r, column=c).border = Border(top=thin, bottom=thin, left=thin, right=thin)
+                tb = Table(displayName="T" + ws.title, ref=f"A4:{chr(64 + ncol)}{last}")
+                tb.tableStyleInfo = TableStyleInfo(name="TableStyleLight1", showRowStripes=True)
+                ws.add_table(tb)
+                if ws.title == "RAB":
+                    for r in range(5, last + 1):
+                        ws.cell(row=r, column=2).number_format = "#,##0.00"
+                        ws.cell(row=r, column=4).number_format = '"Rp" #,##0'
+                        ws.cell(row=r, column=5).number_format = '"Rp" #,##0'
+                    ws.cell(row=last + 2, column=4, value="TOTAL BIAYA MATERIAL").font = Font(bold=True)
+                    tot = ws.cell(row=last + 2, column=5, value=f"=SUM(E5:E{last})")
+                    tot.font = Font(bold=True, color="FFFFFF")
+                    tot.fill = PatternFill("solid", fgColor="2FC29B")
+                    tot.number_format = '"Rp" #,##0'
+                else:
+                    for r in range(5, last + 1):
+                        ws.cell(row=r, column=2).number_format = "#,##0.00"
+                        ws.cell(row=r, column=2).alignment = Alignment(horizontal="left")
+        return buf.getvalue()
 
-    def build_csv(sep):
-        return (
-            "LAPORAN CIVILCALC PRO - ESTIMASI DINDING 1/2 BATU\n\n"
-            "PARAMETER\n" + params.to_csv(index=False, sep=sep)
-            + "\nREKAPITULASI RAB\n" + rab_export.to_csv(index=False, sep=sep)
-        ).encode("utf-8-sig")
-
-    e1, e2 = st.columns(2)
-    e1.download_button("⬇️ Unduh CSV (pemisah koma)", build_csv(","), "laporan_civilcalc.csv", "text/csv", use_container_width=True)
-    e2.download_button("⬇️ Unduh CSV Excel (pemisah titik koma)", build_csv(";"), "laporan_civilcalc_excel.csv", "text/csv", use_container_width=True)
-    st.caption("Gunakan versi titik koma bila Excel Anda memakai pengaturan regional Indonesia.")
+    nama_file = "".join(ch if ch.isalnum() else "_" for ch in proyek)[:40] or "proyek"
+    try:
+        st.download_button("⬇️ Unduh Laporan Excel (.xlsx)", buat_xlsx(), f"RAB_{nama_file}.xlsx",
+                           "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", use_container_width=True)
+        st.caption("Berisi 2 sheet berformat tabel: Ringkasan dan RAB, lengkap dengan total biaya.")
+    except Exception:
+        st.warning("Fitur Excel butuh paket openpyxl. Tambahkan baris `openpyxl` ke requirements.txt, lalu deploy ulang.")
+        st.download_button("⬇️ Unduh CSV (cadangan)", df_rab.to_csv(index=False, sep=";").encode("utf-8-sig"), f"RAB_{nama_file}.csv", "text/csv")
