@@ -9,6 +9,7 @@ import math
 
 import pandas as pd
 import plotly.express as px
+import plotly.graph_objects as go
 import streamlit as st
 
 st.set_page_config(page_title="CivilCalc Pro", page_icon="🧱", layout="wide", initial_sidebar_state="expanded")
@@ -45,6 +46,7 @@ def default_db():
         ],
         "semen_sak": 70000.0,
         "semen_sak50": 87500.0,
+        "air_liter": 20.0,
         "perekat_sak": 80000.0,
         "pasir_m3": 280000.0,
         "mortar": {"ratio": "1:4", "semen_kg_m3": 325.0, "pasir_m3_m3": 0.60, "fas": 0.5},
@@ -63,6 +65,7 @@ def init_state():
 init_state()
 db = st.session_state.db
 db.setdefault("semen_sak50", 87500.0)
+db.setdefault("air_liter", 20.0)
 db.setdefault("perekat_sak", 80000.0)
 db["mortar"].setdefault("fas", 0.5)
 
@@ -156,6 +159,10 @@ div[data-testid="stDataFrame"] { border-radius: 16px; overflow: hidden; }
 .gate { border-radius: 24px 24px 0 0; margin-bottom: -1rem; }
 div[data-testid="stForm"] { background: rgba(255,255,255,0.75); border: 1px solid #ffffff; border-top: none; border-radius: 0 0 24px 24px; }
 :root { color-scheme: light; }
+.kpi { height: 158px; padding: 16px 18px !important; display: flex; flex-direction: column; justify-content: space-between; overflow: hidden; box-sizing: border-box; }
+.kpi .value { font-size: 1.45rem !important; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin: 4px 0 !important; }
+.kpi .label { font-size: 0.68rem !important; letter-spacing: 0.4px !important; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.kpi .detail { font-size: 0.76rem; line-height: 1.35; }
 div[data-testid="stMain"] p, div[data-testid="stMain"] label, div[data-testid="stMain"] [data-testid="stWidgetLabel"] p, div[data-testid="stMain"] [data-testid="stCaptionContainer"] { color: #0d3d4a; }
 .hero p { color: #d6edf2 !important; }
 .kpi .label { color: #1f3b45 !important; font-weight: 700; }
@@ -198,7 +205,7 @@ def g(x):
 ver = st.session_state.ver
 mat_names = [m["nama"] for m in db["materials"]]
 V = st.session_state.setdefault("vals", {})
-for _k, _v in {"p": 10.0, "t": 3.0, "buk": 3.0, "spesi": 1.5, "waste": 5, "sak": 40}.items():
+for _k, _v in {"p": 10.0, "t": 3.0, "buk": 3.0, "spesi": 1.5, "waste": 5, "sak": 40, "fas": 0.5}.items():
     V.setdefault(_k, _v)
 if V.get("mat") not in mat_names:
     V["mat"] = mat_names[0]
@@ -221,6 +228,7 @@ def price_state():
     V.setdefault(ks, float(db["semen_sak"] if V["sak"] == 40 else db["semen_sak50"]))
     V.setdefault(kp, float(db["pasir_m3"]))
     V.setdefault(km, float(db["perekat_sak"]))
+    V.setdefault(f"hw_{ver}", float(db["air_liter"]))
     return m, kb, ks, kp, km
 
 
@@ -245,7 +253,7 @@ with st.sidebar:
         if _nm.strip() and _nm.strip() != proyek:
             st.session_state.proyek = _nm.strip()
             st.rerun()
-        for k, ic, lb in (("home", "📊", "Dashboard"), ("geo", "📐", "Geometri Dinding"), ("mat", "🧱", "Spesifikasi Material"), ("hrg", "💰", "Harga Satuan Material")):
+        for k, ic, lb in (("home", "📊", "Dashboard"), ("geo", "📐", "Geometri Dinding"), ("mat", "🧱", "Spesifikasi Material"), ("hrg", "💰", "Harga Satuan Material"), ("air", "💧", "Pengaturan Air (FAS)")):
             st.button(f"{ic}  {lb}", key=f"nav_{k}", on_click=set_page, args=(k,), use_container_width=True,
                       type="primary" if st.session_state.page == k else "secondary")
     if admin_available:
@@ -272,7 +280,8 @@ sak_kg = float(V["sak"])
 panjang_dinding, tinggi_dinding, luas_bukaan, waste = V["p"], V["t"], V["buk"], V["waste"]
 tebal_spesi = PEREKAT_CM if is_ringan else V["spesi"]
 harga_bata, harga_semen, harga_pasir, harga_perekat = V[_kb], V[_ks], V[_kp], V[_km]
-fas = db["mortar"]["fas"]
+harga_air = V[f"hw_{ver}"]
+fas = V["fas"]
 p, b, t, s = mat["p"] / 100.0, mat["b"] / 100.0, mat["t"] / 100.0, tebal_spesi / 100.0
 luas_gross = panjang_dinding * tinggi_dinding
 a_netto = max(0.0, luas_gross - luas_bukaan)
@@ -309,7 +318,7 @@ else:
     rows.append((f"Semen Portland (sak {g(sak_kg)} kg)", semen_sak, "sak", harga_semen, "Semen"))
     rows.append(("Pasir Pasang", pasir_m3, "m³", harga_pasir, "Pasir"))
     if is_merah:
-        rows.append((f"Air Adukan (FAS {g(fas)})", air_l, "liter", 0.0, "Air"))
+        rows.append((f"Air Adukan (FAS {g(fas)})", air_l, "liter", harga_air, "Air"))
 rab = pd.DataFrame([{"Uraian Material": r[0], "Volume": r[1], "Satuan": r[2], "Harga Satuan (Rp)": r[3], "Subtotal (Rp)": r[1] * r[3], "Ringkas": r[4]} for r in rows])
 biaya_total = float(rab["Subtotal (Rp)"].sum())
 
@@ -350,7 +359,7 @@ if not proyek:
 
 if st.session_state.page != "home":
     _pg = st.session_state.page
-    _titles = {"geo": "📐 Geometri Dinding", "mat": "🧱 Spesifikasi Material", "hrg": "💰 Harga Satuan Material"}
+    _titles = {"geo": "📐 Geometri Dinding", "mat": "🧱 Spesifikasi Material", "hrg": "💰 Harga Satuan Material", "air": "💧 Pengaturan Air (FAS)"}
     st.markdown(f'<div class="section-title">{_titles[_pg]}</div>', unsafe_allow_html=True)
     c1, c2, c3 = st.columns(3)
     if _pg == "geo":
@@ -370,6 +379,13 @@ if st.session_state.page != "home":
                 field("mat", "sld", "spesi", "Tebal spesi (cm)", min_value=0.5, max_value=3.0, step=0.1)
         with c3:
             field("mat", "sld", "waste", "Waste / susut bata (%)", min_value=0, max_value=30, step=1)
+    elif _pg == "air":
+        with c1:
+            if "merah" in V["mat"].lower():
+                field("air", "sld", "fas", "Faktor air-semen (FAS)", min_value=0.45, max_value=0.60, step=0.01)
+                st.caption("Default 0,50. Air adukan (liter) = kebutuhan semen (kg) × FAS.")
+            else:
+                st.info("Air hanya dihitung untuk bata merah standar dan bata merah press.")
     else:
         with c1:
             field("hrg", "sel", "sak", "Ukuran sak semen", options=[40, 50], format_func=lambda x: f"{x} kg")
@@ -383,7 +399,10 @@ if st.session_state.page != "home":
             field("hrg", "num", kp_, "Harga pasir (Rp/m³)", min_value=0.0, step=5000.0, format="%.0f")
         with d2:
             field("hrg", "num", km_, "Harga mortar perekat (Rp/sak 40 kg)", min_value=0.0, step=1000.0, format="%.0f")
-        st.caption("Harga bata mengikuti material yang dipilih. Mortar perekat hanya dipakai untuk bata ringan.")
+        with d3:
+            if "merah" in V["mat"].lower():
+                field("hrg", "num", f"hw_{ver}", "Harga air (Rp/liter)", min_value=0.0, step=5.0, format="%.0f")
+        st.caption("Harga bata mengikuti material yang dipilih. Mortar perekat hanya untuk bata ringan, harga air hanya untuk bata merah.")
     st.button("📊 Lihat Hasil di Dashboard", on_click=set_page, args=("home",), type="primary")
     st.stop()
 
@@ -402,7 +421,7 @@ else:
 with tab1:
     cards = [
         kpi("Luas Netto Dinding", f"{num(a_netto)} m²", f"Gross {num(luas_gross)} m² − bukaan {num(luas_bukaan)} m²", "blue"),
-        kpi("Total Kebutuhan Unit", f"{num(n_total, 0)} buah", f"Teoritis {num(unit_teoritis, 1)} + waste {num(waste, 0)}%", "amber"),
+        kpi("Kebutuhan Unit", f"{num(n_total, 0)} buah", f"Teoritis {num(unit_teoritis, 1)} + waste {num(waste, 0)}%", "amber"),
     ]
     if is_ringan:
         cards.append(kpi("Mortar Perekat", f"{num(per_sak, 0)} sak", f"{num(per_kg, 1)} kg · sak {g(PEREKAT_SAK_KG)} kg", "navy"))
@@ -432,8 +451,8 @@ with tab2:
     st.markdown(f'<div class="section-title">Rekapitulasi RAB Material &mdash; {html.escape(proyek)}</div>', unsafe_allow_html=True)
     tampil = rab.drop(columns="Ringkas").copy()
     tampil["Volume"] = [num(v, 2 if u == "m³" else 0) for v, u in zip(rab["Volume"], rab["Satuan"])]
-    tampil["Harga Satuan (Rp)"] = ["-" if u == "liter" else rp(h) for h, u in zip(rab["Harga Satuan (Rp)"], rab["Satuan"])]
-    tampil["Subtotal (Rp)"] = ["-" if u == "liter" else rp(h) for h, u in zip(rab["Subtotal (Rp)"], rab["Satuan"])]
+    tampil["Harga Satuan (Rp)"] = [rp(h) for h in rab["Harga Satuan (Rp)"]]
+    tampil["Subtotal (Rp)"] = [rp(h) for h in rab["Subtotal (Rp)"]]
     st.dataframe(tampil, use_container_width=True, hide_index=True)
 
     LAY = dict(font_family="Inter", font_color="#0d3d4a", separators=",.", paper_bgcolor="rgba(0,0,0,0)",
@@ -463,59 +482,102 @@ with tab2:
         items = [("Bata", "n", "buah")]
         items += [("Mortar Perekat", "per_sak", "sak")] if is_ringan else [("Semen", "sak", "sak"), ("Pasir", "pasir", "m³")]
         items += [("Air", "air", "liter")] if is_merah else []
-        xs = [round(a_netto * f / 10, 2) for f in range(0, 21)]
+        xs = [round(a_netto * f / 10, 2) for f in range(1, 21)]
         hs = [hitung(x) for x in xs]
-        st.markdown('<div class="section-title">Diagram Garis: Kebutuhan Tiap Material vs Luas Dinding</div>', unsafe_allow_html=True)
-        for i in range(0, len(items), 2):
-            for col, (nm_, key, unit) in zip(st.columns(2), items[i:i + 2]):
-                with col:
-                    fl = px.line(x=xs, y=[h[key] for h in hs], markers=True, title=f"Kebutuhan {nm_}",
-                                 labels={"x": "Luas netto (m²)", "y": unit}, color_discrete_sequence=[PAL[(i // 2) % 4]])
-                    fl.add_scatter(x=[a_netto], y=[R[key]], mode="markers", name="Saat ini",
-                                   marker=dict(size=13, color="#f6c453", line=dict(width=2, color="#115569")))
-                    fl.update_layout(showlegend=False, **LAY)
-                    st.plotly_chart(fl, use_container_width=True)
+        st.markdown('<div class="section-title">Diagram Garis: Kebutuhan Material vs Luas Dinding</div>', unsafe_allow_html=True)
+        fl = go.Figure()
+        for i, (nm_, key, unit) in enumerate(items):
+            pts = [(x, h[key]) for x, h in zip(xs, hs) if h[key] > 0]
+            if pts:
+                fl.add_trace(go.Scatter(x=[q[0] for q in pts], y=[q[1] for q in pts], mode="lines+markers", name=f"{nm_} ({unit})",
+                                        line=dict(color=PAL[i % 4], width=3),
+                                        hovertemplate=f"{nm_}: %{{y:,.2f}} {unit}<br>Luas: %{{x:,.1f}} m²<extra></extra>"))
+        fl.add_vline(x=a_netto, line_dash="dash", line_color="#d97706", annotation_text="Saat ini")
+        fl.update_layout(yaxis_type="log", yaxis_title="Jumlah (satuan sesuai legenda)", xaxis_title="Luas netto dinding (m²)",
+                         legend=dict(orientation="h", y=-0.25), **LAY)
+        st.plotly_chart(fl, use_container_width=True)
+        st.caption("Skala vertikal logaritmik dipakai agar material dengan satuan berbeda bisa tampil dalam satu grafik.")
 
 # ------------------------------------------------------------------ SIMULASI
-SIM_HTML = '''
+SIM_HTML = r'''
 <div style="font-family:Inter,system-ui,sans-serif;color:#0d3d4a">
-<div id="st" style="position:relative;margin:0 auto;border-bottom:8px solid #115569;background:linear-gradient(#eef6f9,#d3e5ee);border-radius:16px 16px 0 0;overflow:hidden"></div>
-<div style="display:flex;justify-content:space-between;align-items:center;margin-top:12px;gap:10px;flex-wrap:wrap">
-<b id="tx"></b><span><button onclick="play()">▶ Mulai</button> <button onclick="reset()">↺ Ulang</button></span></div>
-<div id="nt" style="font-size:12px;color:#5b7c86;margin-top:6px"></div></div>
+<canvas id="cv" style="display:block;margin:0 auto;border-radius:16px;background:linear-gradient(#dff0f7,#f4fafc)"></canvas>
+<div style="display:flex;justify-content:space-between;align-items:center;margin-top:10px;gap:10px;flex-wrap:wrap"><b id="tx"></b><span><button onclick="play()">▶ Mulai</button> <button onclick="reset()">↺ Ulang</button></span></div>
+<div id="lg" style="font-size:12px;color:#2b4650;margin-top:6px"></div></div>
 <style>button{background:#0b5563;color:#fff;border:0;border-radius:10px;padding:8px 14px;font-weight:600;cursor:pointer}</style>
 <script>
-const C=__CFG__;const S=document.getElementById("st");let tm=null,k=0;
-const W=Math.max(260,Math.min(640,window.innerWidth-24)),bw=W/(C.cols+0.5),bh=Math.max(10,bw*C.ratio),g=Math.max(2,bw*0.05);
-S.style.width=W+"px";S.style.height=(C.rows*bh+24)+"px";
-document.getElementById("nt").textContent="Cuplikan pola pasangan (skala disederhanakan). Bata di ujung lapis dipotong setengah. Kebutuhan aktual: "+C.total+" bata, ± "+C.rowsAll+" lapis.";
-function reset(){clearInterval(tm);S.innerHTML="";k=0;document.getElementById("tx").textContent="Siap dipasang";}
-function play(){reset();tm=setInterval(step,110);}
-function step(){
- if(k>=C.rows*C.cols){clearInterval(tm);document.getElementById("tx").textContent="Selesai ✔ "+C.rows+" lapis × "+C.cols+" bata";return;}
- const r=Math.floor(k/C.cols),c=k%C.cols,y=S.clientHeight-(r+1)*bh-6;
- if(c===0){const m=document.createElement("div");m.style.cssText="position:absolute;left:0;width:"+W+"px;height:"+bh+"px;background:#aebdc3;top:"+y+"px;transform:scaleX(0);transform-origin:left;transition:transform .5s";S.appendChild(m);setTimeout(()=>m.style.transform="scaleX(1)",20);const h=document.createElement("div");h.style.cssText="position:absolute;border-radius:2px;width:"+(bw/2-g)+"px;height:"+(bh-g)+"px;left:"+(r%2?0:C.cols*bw)+"px;top:"+y+"px;background:"+C.color+";box-shadow:inset 0 -2px 0 rgba(0,0,0,.18)";S.appendChild(h);}
- const d=document.createElement("div");
- d.style.cssText="position:absolute;border-radius:2px;width:"+(bw-g)+"px;height:"+(bh-g)+"px;left:"+(c*bw+(r%2?bw/2:0))+"px;top:"+(y-60)+"px;opacity:0;background:"+C.color+";box-shadow:inset 0 -2px 0 rgba(0,0,0,.18);transition:all .3s ease-in";
- S.appendChild(d);requestAnimationFrame(()=>{d.style.top=y+"px";d.style.opacity="1";});
- k++;document.getElementById("tx").textContent="Lapis "+(r+1)+"/"+C.rows+" · Bata "+k+"/"+(C.rows*C.cols);
+const C=__CFG__,cv=document.getElementById("cv"),x=cv.getContext("2d");
+const L=C.L,H=C.H,rise=Math.min(2.2,Math.max(0.8,L*0.15)),Dp=0.7,B=0.15,M=0.9;
+const Wm=L+2*M,Hm=0.25+rise+B+H+B+Dp+0.1;
+const S=Math.min(Math.max(300,Math.min(780,innerWidth-24))/Wm,420/Hm);
+cv.width=Math.round(Wm*S);cv.height=Math.round(Hm*S);
+const X0=M*S,GY=(0.25+rise+B+H+B)*S,WB=GY-B*S,WT=WB-H*S;
+const pe=C.p+C.s,te=C.t+C.s,rows=Math.ceil(H/te),BR=[];
+for(let r=0;r<rows;r++){const y=r*te,off=(r%2)?pe/2:0;
+ for(let c=-1;c*pe+off<L;c++){const a=Math.max(0,c*pe+off),e=Math.min(L,c*pe+off+C.p),h=Math.min(C.t,H-y);
+  if(e-a<0.02||h<0.01)continue;
+  if(C.ops.some(o=>a<o.x+o.w&&e>o.x&&y<o.y+o.h&&y+h>o.y))continue;
+  BR.push([a,y,e-a,h]);}}
+const m=Math.max(2,Math.round(L/3.5)+1),KC=[];
+for(let i=0;i<m;i++){let cx=i*(L-0.15)/(m-1);const o=C.ops.find(o=>cx<o.x+o.w&&cx+0.15>o.x);if(o)cx=(o.x-0.2>=0)?o.x-0.2:o.x+o.w+0.05;KC.push(cx);}
+const R=(c,px,py,w,h)=>{x.fillStyle=c;x.fillRect(px,py,w,h);};
+const cl=(t,a,d)=>Math.min(1,Math.max(0,(t-a)/d));
+let t=0,tm=null;
+function draw(t){
+ x.clearRect(0,0,cv.width,cv.height);
+ R("#cdbf9f",0,GY,cv.width,cv.height-GY);R("#7fb069",0,GY-2,cv.width,3);
+ x.save();x.beginPath();x.rect(0,GY,cv.width,Dp*S*cl(t,0,15));x.clip();x.fillStyle="#8d8f86";x.beginPath();
+ x.moveTo(X0-0.25*S,GY);x.lineTo(X0+(L+0.25)*S,GY);x.lineTo(X0+(L+0.45)*S,GY+Dp*S);x.lineTo(X0-0.45*S,GY+Dp*S);x.closePath();x.fill();x.restore();
+ R("#98a4aa",X0,GY-B*S,L*S*cl(t,15,15),B*S);
+ const n=Math.floor(BR.length*cl(t,55,120)),g=C.s*S;
+ for(let i=0;i<n;i++){const b=BR[i],bx=X0+b[0]*S,by=WB-(b[1]+b[3])*S;R("#c9d3d7",bx-g/2,by-g/2,b[2]*S+g,b[3]*S+g);R(C.color,bx,by,b[2]*S,b[3]*S);}
+ const p3=cl(t,30,25);KC.forEach(cx=>R("#7f8b91",X0+cx*S,WB-H*S*p3,0.15*S,H*S*p3));
+ if(t>=150)C.ops.forEach(o=>{const ox=X0+o.x*S,oy=WB-(o.y+o.h)*S,w=o.w*S,h=o.h*S;
+  if(o.d){R("#8b5e3c",ox,oy,w,h);R("#6f4a2e",ox+w*0.1,oy+h*0.08,w*0.8,h*0.38);R("#6f4a2e",ox+w*0.1,oy+h*0.52,w*0.8,h*0.4);}
+  else{R("#e9eef0",ox-2,oy-2,w+4,h+4);R("#bfe3f2",ox,oy,w,h);R("#e9eef0",ox+w/2-1,oy,2,h);R("#e9eef0",ox,oy+h/2-1,w,2);}});
+ R("#98a4aa",X0-0.05*S,WT-B*S,(L+0.1)*S*cl(t,175,10),B*S);
+ const p6=cl(t,185,30),nr=Math.max(4,Math.ceil(rise/0.22)),rh=rise*S/nr,base=WT-B*S,hw=(L/2+0.45)*S,cm=X0+L*S/2;
+ for(let i=0;i<nr*p6;i++){const ya=base-i*rh,yb=ya-rh,wa=hw*(1-i/nr),wb=hw*(1-(i+1)/nr);
+  x.fillStyle=i%2?"#b5532f":"#a64a29";x.beginPath();x.moveTo(cm-wa,ya);x.lineTo(cm+wa,ya);x.lineTo(cm+wb,yb);x.lineTo(cm-wb,yb);x.closePath();x.fill();x.strokeStyle="#7a2f17";x.lineWidth=1;x.stroke();}
+ document.getElementById("tx").textContent=t<15?"Memasang pondasi batu kali":t<30?"Mengecor sloof":t<55?"Mendirikan kolom":t<175?"Memasang bata ±"+Math.round(n/BR.length*C.N)+" / "+C.N+" buah":t<185?"Mengecor ring balok":t<215?"Memasang atap genteng":"Selesai ✔";
 }
+function reset(){clearInterval(tm);t=0;draw(0);}
+function play(){reset();tm=setInterval(()=>{t++;draw(t);if(t>=220)clearInterval(tm);},45);}
+document.getElementById("lg").textContent=C.info;
 play();
 </script>'''
 
 with tab_sim:
-    st.markdown('<div class="section-title">Simulasi Pemasangan Bata</div>', unsafe_allow_html=True)
+    st.markdown('<div class="section-title">Simulasi Pemasangan Dinding</div>', unsafe_allow_html=True)
+    _ops, _rest = [], luas_bukaan
+    if _rest >= 1.9:
+        _hd = max(0.5, min(2.1, tinggi_dinding - 0.2))
+        _ops.append({"d": 1, "w": 0.9, "h": _hd, "y": 0.0})
+        _rest -= 0.9 * _hd
+    if _rest > 0.25:
+        _nw = max(1, math.ceil(_rest / 1.5))
+        _ops += [{"d": 0, "w": _rest / _nw, "h": 1.0, "y": max(0.1, min(0.9, tinggi_dinding - 1.2))} for _ in range(_nw)]
+    _sw = sum(o["w"] for o in _ops)
+    if _ops and _sw > 0.8 * panjang_dinding:
+        _f = 0.8 * panjang_dinding / _sw
+        for o in _ops:
+            o["w"] *= _f
+            o["h"] = min(max(0.5, tinggi_dinding - 0.3), o["h"] / _f)
+            o["y"] = min(o["y"], max(0.0, tinggi_dinding - o["h"] - 0.1))
+    for _i, o in enumerate(_ops):
+        _cx = (_i + 0.5) * panjang_dinding / len(_ops)
+        o["x"] = max(0.3, min(panjang_dinding - o["w"] - 0.3, _cx - o["w"] / 2))
+        for _k in ("x", "y", "w", "h"):
+            o[_k] = round(o[_k], 3)
+    _nd, _nj = sum(1 for o in _ops if o["d"]), sum(1 for o in _ops if not o["d"])
+    _bk = "Tanpa bukaan." if not _ops else "Bukaan: " + " dan ".join(x for x in (f"{_nd} pintu" if _nd else "", f"{_nj} jendela" if _nj else "") if x) + "."
     _cfg = {
-        "cols": int(min(10, max(4, round(panjang_dinding / p_ef)))),
-        "rows": int(min(12, max(4, round(tinggi_dinding / t_ef)))),
-        "ratio": round(t_ef / p_ef, 3),
-        "color": "#cfd8dc" if "ringan" in mat_pilih.lower() else "#c1583c",
-        "total": int(n_total),
-        "rowsAll": int(math.ceil(tinggi_dinding / t_ef)),
+        "L": panjang_dinding, "H": tinggi_dinding, "p": p, "t": t, "s": s,
+        "color": "#cfd8dc" if is_ringan else "#c1583c", "N": int(n_total), "ops": _ops,
+        "info": "Pondasi batu kali · Sloof · Kolom praktis · Pasangan bata · Ring balok · Atap genteng. " + _bk + " Posisi dan ukuran bukaan bersifat ilustrasi.",
     }
-    st.components.v1.html(SIM_HTML.replace("__CFG__", json.dumps(_cfg)), height=400)
-    callout("Pola yang dipakai adalah <b>running bond</b>: setiap lapis digeser setengah bata supaya sambungan tidak sejajar dan dinding lebih kuat. Garis abu-abu di bawah tiap lapis adalah spesi.")
-
+    st.components.v1.html(SIM_HTML.replace("__CFG__", json.dumps(_cfg)), height=560)
+    callout("Ukuran dinding dan jumlah bata pada simulasi mengikuti hitungan aplikasi. Pola bata <b>running bond</b>, bata di sekitar bukaan dan ujung dinding dipotong sesuai kebutuhan.")
 
 # ------------------------------------------------------------------ TAB 3
 with tab3:
@@ -541,9 +603,9 @@ with tab3:
             e1, e2, e3 = st.columns(3)
             n50 = e1.number_input("Harga semen sak 50 kg (Rp)", min_value=0.0, value=float(db["semen_sak50"]), step=1000.0, format="%.0f")
             nper = e2.number_input("Harga mortar perekat sak 40 kg (Rp)", min_value=0.0, value=float(db["perekat_sak"]), step=1000.0, format="%.0f")
-            nfas = e3.number_input("Faktor air-semen (FAS)", min_value=0.2, max_value=1.0, value=float(db["mortar"]["fas"]), step=0.05)
+            nair = e3.number_input("Harga air default (Rp/liter)", min_value=0.0, value=float(db["air_liter"]), step=5.0, format="%.0f")
             if st.form_submit_button("💾 Simpan Harga & Parameter Tambahan", type="primary"):
-                db["semen_sak50"], db["perekat_sak"], db["mortar"]["fas"] = float(n50), float(nper), float(nfas)
+                db["semen_sak50"], db["perekat_sak"], db["air_liter"] = float(n50), float(nper), float(nair)
                 st.session_state.ver += 1
                 st.rerun()
 
