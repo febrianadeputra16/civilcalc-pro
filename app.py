@@ -542,7 +542,7 @@ with tab2:
 SIM_HTML = r'''
 <div style="font-family:Inter,system-ui,sans-serif;color:#0d3d4a">
 <canvas id="cv" style="display:block;margin:0 auto;border-radius:16px;background:linear-gradient(#dff0f7,#f4fafc)"></canvas>
-<div style="display:flex;justify-content:space-between;align-items:center;margin-top:10px;gap:10px;flex-wrap:wrap"><b id="tx"></b><span><button onclick="play()">▶ Mulai</button> <button onclick="reset()">↺ Ulang</button></span></div>
+<div style="display:flex;justify-content:space-between;align-items:center;margin-top:10px;gap:10px;flex-wrap:wrap"><b id="tx"></b><span><button onclick="play()">▶ Mulai</button> <button onclick="play()">↺ Ulang</button></span></div>
 <div id="lg" style="font-size:14px;font-weight:600;color:#2b4650;margin-top:6px"></div></div>
 <style>button{background:#0b5563;color:#fff;border:0;border-radius:10px;padding:8px 14px;font-weight:600;cursor:pointer}</style>
 <script>
@@ -567,7 +567,7 @@ const m=Math.max(2,Math.round(L/3.5)+1),KC=[];
 for(let i=0;i<m;i++){let cx=i*(L-0.15)/(m-1);const o=C.ops.find(o=>cx<o.x+o.w&&cx+0.15>o.x);if(o)cx=(o.x-0.2>=0)?o.x-0.2:o.x+o.w+0.05;KC.push(cx);}
 const R=(c,px,py,w,h)=>{x.fillStyle=c;x.fillRect(px,py,w,h);};
 const cl=(t,a,d)=>Math.min(1,Math.max(0,(t-a)/d));
-let t=0,tm=null;
+let t=0,tm=null,started=false;
 function draw(t){
  x.clearRect(0,0,cv.width,cv.height);
  R("#cdbf9f",0,GY,cv.width,cv.height-GY);R("#7fb069",0,GY-2,cv.width,3);
@@ -584,14 +584,14 @@ function draw(t){
  const p6=cl(t,185,30),nr=Math.max(4,Math.ceil(rise/0.22)),rh=rise*S/nr,base=WT-B*S,hw=(L/2+0.45)*S,cm=X0+L*S/2;
  for(let i=0;i<nr*p6;i++){const ya=base-i*rh,yb=ya-rh,wa=hw*(1-i/nr),wb=hw*(1-(i+1)/nr);
   x.fillStyle=i%2?"#b5532f":"#a64a29";x.beginPath();x.moveTo(cm-wa,ya);x.lineTo(cm+wa,ya);x.lineTo(cm+wb,yb);x.lineTo(cm-wb,yb);x.closePath();x.fill();x.strokeStyle="#7a2f17";x.lineWidth=1;x.stroke();}
- document.getElementById("tx").textContent=t<15?"Memasang pondasi batu kali":t<30?"Mengecor sloof":t<55?"Mendirikan kolom":t<175?"Memasang bata ±"+Math.round(n/BR.length*C.N)+" / "+C.N+" buah":t<185?"Mengecor ring balok":t<215?"Memasang atap genteng":"Selesai ✔";
+ document.getElementById("tx").textContent=!started?"Tekan Mulai untuk melihat simulasi pemasangan":t<15?"Memasang pondasi batu kali":t<30?"Mengecor sloof":t<55?"Mendirikan kolom":t<175?"Memasang bata ±"+Math.round(n/BR.length*C.N)+" / "+C.N+" buah":t<185?"Mengecor ring balok":t<215?"Memasang atap genteng":"Selesai ✔";
 }
 function reset(){clearInterval(tm);t=0;draw(0);}
-function play(){reset();tm=setInterval(()=>{t++;draw(t);if(t>=220)clearInterval(tm);},45);}
+function play(){started=true;reset();tm=setInterval(()=>{t++;draw(t);if(t>=220)clearInterval(tm);},45);}
 document.getElementById("lg").textContent=C.info;
 addEventListener("resize",()=>{layout();draw(t);});
 [150,700].forEach(ms=>setTimeout(()=>{layout();draw(t);},ms));
-play();
+draw(0);
 </script>'''
 
 with tab_sim:
