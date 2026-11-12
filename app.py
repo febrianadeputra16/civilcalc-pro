@@ -1,7 +1,8 @@
 # Install: pip install streamlit pandas plotly
 # Jalankan: streamlit run app.py
-# CivilCalc Pro: Estimator Dinding 1/2 Batu & CMS Admin Panel
+# Tata Bata: Estimator Dinding 1/2 Batu & CMS Admin Panel
 
+import base64
 import copy
 import html
 import json
@@ -12,7 +13,21 @@ import plotly.express as px
 import plotly.graph_objects as go
 import streamlit as st
 
-st.set_page_config(page_title="CivilCalc Pro", page_icon="🧱", layout="wide", initial_sidebar_state="expanded")
+def _ikon():
+    try:
+        from PIL import Image, ImageDraw
+        k = 4
+        im = Image.new("RGBA", (64 * k, 64 * k), (0, 0, 0, 0))
+        d = ImageDraw.Draw(im)
+        d.rounded_rectangle((0, 0, 64 * k - 1, 64 * k - 1), radius=14 * k, fill="#c1583c")
+        pts = [(0, 0), (64, 0), (64, 20), (46, 20), (46, 64), (18, 64), (18, 20), (0, 20)]
+        d.polygon([((x * 0.62 + 12.3) * k, (y * 0.62 + 12.3) * k) for x, y in pts], fill="#fbeee8")
+        return im.resize((64, 64), Image.LANCZOS)
+    except Exception:
+        return "🧱"
+
+
+st.set_page_config(page_title="Tata Bata", page_icon=_ikon(), layout="wide", initial_sidebar_state="expanded")
 
 def get_secret(key):
     try:
@@ -80,6 +95,18 @@ def rp(x):
 
 def num(x, d=2):
     return f"{x:,.{d}f}".replace(",", "X").replace(".", ",").replace("X", ".")
+
+
+LOGO_SVG = (
+    '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 110 110"><defs><clipPath id="c"><path d="M0 0H64V20H46V64H18V20H0Z"/></clipPath></defs>'
+    '<rect width="110" height="110" rx="24" fill="#c1583c"/><g transform="translate(20,20) scale(1.1)">'
+    '<path d="M0 0H64V20H46V64H18V20H0Z" fill="#fbeee8"/><g clip-path="url(#c)"><g fill="#f3d9cf">'
+    '<rect x="21" y="0" width="22" height="10"/><rect x="32" y="10" width="21.3" height="10"/>'
+    '<rect x="18" y="31" width="7" height="11"/><rect x="32" y="42" width="14" height="11"/></g>'
+    '<path d="M0 10H64M0 20H64M18 31H46M18 42H46M18 53H46M21 0V10M43 0V10M10.7 10V20M32 10V20M53.3 10V20M32 20V31M25 31V42M39 31V42M32 42V53M25 53V64M39 53V64" fill="none" stroke="#c1583c" stroke-width="1.4"/>'
+    '</g></g></svg>'
+)
+LOGO_URI = "data:image/svg+xml;base64," + base64.b64encode(LOGO_SVG.encode()).decode()
 
 
 # ------------------------------------------------------------------ CSS
@@ -171,13 +198,16 @@ div[data-testid="stMain"] p, div[data-testid="stMain"] label, div[data-testid="s
 .stTabs [data-baseweb="tab"] p { color: #0d3d4a !important; font-weight: 700; }
 .stTabs [aria-selected="true"] p { color: #ffffff !important; }
 [data-testid="InputInstructions"], [data-testid="stHeaderActionElements"] { display: none !important; }
+.hero-brand { display: flex; align-items: center; gap: 18px; }
+.hero-logo { width: 72px; height: 72px; border-radius: 18px; flex-shrink: 0; box-shadow: 0 6px 16px rgba(0,0,0,0.25); }
+.brand-img { width: 48px; height: 48px; border-radius: 13px; flex-shrink: 0; }
 .hero-t { margin: 0; font-size: 1.8rem; font-weight: 800; color: #ffffff; letter-spacing: -0.5px; }
 .gate { padding: 18px 30px 4px 30px; }
 .gate-ic { font-size: 4.5rem; line-height: 1.1; }
 .gate-t { font-size: 2rem; font-weight: 800; color: #0d3d4a; margin: 4px 0 8px 0; }
 @media (max-width: 768px) {
     .block-container { padding: 1rem 0.8rem; }
-    .hero { padding: 18px; } .hero-t { font-size: 1.3rem; }
+    .hero { padding: 18px; } .hero-logo { width: 52px; height: 52px; } .hero-t { font-size: 1.3rem; }
     .kpi .value { font-size: 1.4rem; } .gate-ic { font-size: 3.5rem; } .gate-t { font-size: 1.5rem; }
 }
 </style>
@@ -254,7 +284,7 @@ def field(sec, kind, key, label, **kw):
 
 with st.sidebar:
     st.markdown(
-        '<div class="brand"><div class="brand-logo">🧱</div><div><div class="brand-t">CivilCalc Pro</div>'
+        f'<div class="brand"><img class="brand-img" src="{LOGO_URI}"><div><div class="brand-t">Tata Bata</div>'
         '<div class="brand-s">Estimator Dinding 1/2 Batu</div></div></div>',
         unsafe_allow_html=True,
     )
@@ -340,8 +370,8 @@ badge = (
     else '<span class="badge badge-user">👤 User Mode</span>'
 )
 st.markdown(
-    f'<div class="hero"><div><div class="hero-t">🧱 CivilCalc Pro</div>'
-    f'<p>Hitung Volume Material dan RAB Secara Presisi</p></div>'
+    f'<div class="hero"><div class="hero-brand"><img class="hero-logo" src="{LOGO_URI}"><div><div class="hero-t">Tata Bata</div>'
+    f'<p>Hitung Volume Material dan RAB Secara Presisi</p></div></div>'
     f'<div class="hero-r">{chip}</div></div>',
     unsafe_allow_html=True,
 )
@@ -754,7 +784,7 @@ with tab4:
             for ws, title, widths in ((xw.sheets["Ringkasan"], "RINGKASAN PROYEK", (30, 30, 12)), (xw.sheets["RAB"], "RENCANA ANGGARAN BIAYA MATERIAL", (46, 14, 10, 20, 22))):
                 ws["A1"] = f"{title} - {proyek}"
                 ws["A1"].font = Font(bold=True, size=14, color="115569")
-                ws["A2"] = "CivilCalc Pro"
+                ws["A2"] = "Tata Bata"
                 ws["A2"].font = Font(italic=True, color="5B7C86")
                 last = ws.max_row
                 ncol = len(widths)
